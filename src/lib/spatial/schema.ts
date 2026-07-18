@@ -105,6 +105,7 @@ export const sceneObjectSchema = z.object({
     "structure",
   ]),
   assetId: z.string().min(1),
+  placementClass: z.enum(["solid", "floor_layer"]).default("solid"),
   transform: transformSchema,
   dimensions: dimensionsSchema,
   materialIds: z.array(z.string().min(1)).default([]),

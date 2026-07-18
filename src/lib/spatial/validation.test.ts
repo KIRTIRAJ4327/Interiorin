@@ -59,4 +59,19 @@ describe("canonical scene spatial validation", () => {
     const report = validateScene(scene);
     expect(report.findings).toContainEqual(expect.objectContaining({ id: "envelope:table", severity: "blocking" }));
   });
+
+  it("allows solid furniture on a floor layer without hiding real solid collisions", () => {
+    const scene = structuredClone(generateStudioOptions(project)[0]!.scene);
+    const rug = scene.objects.find((object) => object.placementClass === "floor_layer")!;
+    const sofa = scene.objects.find((object) => object.id === "sofa")!;
+    const table = scene.objects.find((object) => object.id === "table")!;
+    expect(rug).toBeDefined();
+    rug.transform.position = { ...sofa.transform.position };
+    let report = validateScene(scene);
+    expect(report.findings.some((finding) => finding.type === "overlap" && finding.relatedIds.includes(rug.id) && finding.relatedIds.includes(sofa.id))).toBe(false);
+
+    table.transform.position = { ...sofa.transform.position };
+    report = validateScene(scene);
+    expect(report.findings.some((finding) => finding.type === "overlap" && finding.relatedIds.includes("sofa") && finding.relatedIds.includes("table"))).toBe(true);
+  });
 });

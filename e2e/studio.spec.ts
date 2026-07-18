@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("studio turns an entered interior envelope into inspectable versions and handoff", async ({ page }, testInfo) => {
+  test.slow();
   await page.goto("/");
   await expect(page).toHaveURL(/\/studio$/);
   await expect(page.getByRole("heading", { name: "Start with the space you have." })).toBeVisible();
@@ -102,6 +103,7 @@ test("uploaded source observations become visible, non-metric scene evidence", a
 });
 
 test("refinement reports footprint impact and supports typed undo", async ({ page }, testInfo) => {
+  test.slow();
   test.skip(testInfo.project.name !== "chromium", "One browser is sufficient for the deterministic validation contract.");
   await page.goto("/studio");
   await page.getByRole("button", { name: "Empty space" }).click();
@@ -134,4 +136,23 @@ test("refinement reports footprint impact and supports typed undo", async ({ pag
   await expect(page.locator(".action-receipts")).toContainText("3D control · move Central table right 100 mm");
   await page.getByRole("button", { name: "Rotate Central table left 15 degrees" }).click();
   await expect(page.locator(".action-receipts")).toContainText("can rotate to the requested angle");
+});
+
+test("interior directions render canonical furniture, rug, and plant as distinct rooms", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One deterministic browser captures the three visual directions.");
+  await page.goto("/studio");
+  await page.getByRole("button", { name: /generate three spatial directions/i }).click();
+  await expect(page.locator(".product-model canvas")).toBeVisible();
+  await page.getByRole("button", { name: "Open model facts" }).click();
+  await expect(page.locator(".product-model-facts")).toContainText("Conversation rug");
+  await expect(page.locator(".product-model-facts")).toContainText("Upright planter");
+  await expect(page.getByLabel("Select object").locator("option")).toHaveCount(6);
+  await page.getByRole("button", { name: "Open model facts" }).click();
+
+  for (const name of ["Clear Passage", "Conversation Island", "Storage Led"]) {
+    await page.getByRole("radio", { name: new RegExp(name, "i") }).click();
+    await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    await page.locator(".product-model canvas").screenshot({ path: testInfo.outputPath(`${name.toLowerCase().replaceAll(" ", "-")}.png`) });
+  }
 });

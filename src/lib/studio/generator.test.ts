@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { generateStudioOptions } from "./generator";
 import { studioProjectSchema } from "./schema";
+import { validateScene } from "@/lib/spatial/validation";
 
 function project(kind: "interior" | "exterior") {
   return studioProjectSchema.parse({
@@ -28,6 +29,20 @@ describe("instant studio option generation", () => {
     expect(new Set(tablePositions.map((position) => JSON.stringify(position))).size).toBe(3);
     expect(options[0]?.scene.zones[0]?.provenance.authority).toBe("user_declared");
     expect(options[0]?.scene.objects[0]?.provenance.authority).toBe("observed_unverified");
+    expect(options.every((option) => option.scene.objects.map((object) => object.id).sort().join(",") === "plant,rug,sofa,storage,table")).toBe(true);
+    expect(options.every((option) => option.scene.objects.some((object) => object.id === "rug" && object.placementClass === "floor_layer"))).toBe(true);
+    expect(new Set(options.map((option) => option.scene.zones.find((zone) => zone.id === "floor")?.materialId)).size).toBeGreaterThan(1);
+    expect(new Set(options.map((option) => option.scene.objects.find((object) => object.id === "sofa")?.transform.rotation.y)).size).toBeGreaterThan(1);
+  });
+
+  it.each([
+    [2, 2, 2.4],
+    [5.2, 4, 2.7],
+    [7.5, 5.8, 3.1],
+  ])("keeps every canonical object inside a %s × %s m entered envelope", (widthM, depthM, heightM) => {
+    const sized = studioProjectSchema.parse({ ...project("interior"), dimensions: { widthM, depthM, heightM } });
+    const reports = generateStudioOptions(sized).map((option) => validateScene(option.scene));
+    expect(reports.flatMap((report) => report.findings.filter((finding) => finding.severity === "blocking"))).toEqual([]);
   });
 
   it("creates exterior directions while preserving the professional boundary blocker", () => {

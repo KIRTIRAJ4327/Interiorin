@@ -52,7 +52,7 @@ npm run build
 
 The browser suite builds and starts the production app, then runs the Studio and authority-proof journeys serially in desktop Chromium and mobile Chromium. Assertion screenshots are isolated under Playwright's disposable test output; curated proof render evidence is kept under `artifacts/screenshots/`.
 
-The current gate passes 19 test files / 58 tests, the optimized production build, and the production browser journeys across desktop/mobile with intentional skips for single-browser-only provider contracts. The original Forge proof verification remains in [docs/forge/verification-report.md](docs/forge/verification-report.md); the broader Studio slice is documented in [docs/studio-vertical-slice.md](docs/studio-vertical-slice.md).
+The current gate passes 24 test files / 76 tests, the optimized production build, and the production browser journeys across desktop/mobile with intentional skips for single-browser-only provider contracts. The original Forge proof verification remains in [docs/forge/verification-report.md](docs/forge/verification-report.md); the broader Studio slice is documented in [docs/studio-vertical-slice.md](docs/studio-vertical-slice.md).
 
 ## Truth boundaries
 

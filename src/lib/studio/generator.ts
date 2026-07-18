@@ -31,6 +31,39 @@ function observedProvenance(project: StudioProject): Provenance {
   };
 }
 
+function generatedProvenance(project: StudioProject, label: string): Provenance {
+  return {
+    evidence: "generated",
+    confidence: "medium",
+    authority: "generated",
+    sourceLabel: label,
+    sourceRef: `project:${project.id}:deterministic-layout`,
+    capturedAt: project.createdAt,
+    note: "Canonical design object generated inside the homeowner-entered envelope; dimensions and clearances remain reviewable.",
+  };
+}
+
+function placeObject(scene: SpatialScene, objectId: string, x: number, z: number, rotationY = 0) {
+  const object = scene.objects.find((candidate) => candidate.id === objectId);
+  if (!object) return;
+  object.transform.rotation.y = rotationY;
+  const width = object.dimensions.width * Math.abs(object.transform.scale.x);
+  const depth = object.dimensions.depth * Math.abs(object.transform.scale.z);
+  const cosine = Math.abs(Math.cos(rotationY));
+  const sine = Math.abs(Math.sin(rotationY));
+  const halfX = (width * cosine + depth * sine) / 2;
+  const halfZ = (width * sine + depth * cosine) / 2;
+  const floor = scene.zones.find((zone) => ["floor", "yard", "patio"].includes(zone.kind));
+  if (!floor) return;
+  const xs = floor.polygon.map((point) => point.x);
+  const zs = floor.polygon.map((point) => point.z);
+  object.transform.position = {
+    x: Math.min(Math.max(x, Math.min(...xs) + halfX), Math.max(...xs) - halfX),
+    y: 0,
+    z: Math.min(Math.max(z, Math.min(...zs) + halfZ), Math.max(...zs) - halfZ),
+  };
+}
+
 function relativeCoordinate(position: string, length: number) {
   if (position === "left" || position === "foreground") return length * 0.18;
   if (position === "right" || position === "background") return length * 0.82;
@@ -77,6 +110,7 @@ function interiorBaseline(project: StudioProject): SpatialScene {
   const { widthM: width, depthM: depth, heightM: height } = project.dimensions;
   const entered = projectProvenance(project, "Homeowner-entered room dimensions");
   const observed = observedProvenance(project);
+  const generated = generatedProvenance(project, "Interiorin deterministic room dressing");
   const sofaObservation = observedItem(project, "seating");
   const storageObservation = observedItem(project, "storage");
   const existing = project.condition === "existing" && !project.source.analysis;
@@ -125,9 +159,9 @@ function interiorBaseline(project: StudioProject): SpatialScene {
         id: "sofa",
         label: sofaObservation?.label ?? (existing ? "Existing sofa" : "Suggested sofa"),
         category: "seating",
-        assetId: "sofa-linen-low",
+        assetId: "sofa-linen-compact",
         transform: transform(Math.max(1.1, width * 0.26), 0, Math.max(0.65, depth * 0.22)),
-        dimensions: { width: Math.min(2.2, width * 0.42), height: 0.82, depth: 0.92, provenance: observed },
+        dimensions: { width: Math.min(2.1, Math.max(0.82, width * 0.36)), height: 0.82, depth: Math.min(0.9, Math.max(0.6, depth * 0.22)), provenance: observed },
         materialIds: ["linen-oat"],
         protected: sofaObservation ? !sofaObservation.likelyMovable : existing,
         provenance: observed,
@@ -136,9 +170,9 @@ function interiorBaseline(project: StudioProject): SpatialScene {
         id: "table",
         label: "Central table",
         category: "table",
-        assetId: "table-oak-round",
+        assetId: "table-oak-round-compact",
         transform: transform(width * 0.5, 0, depth * 0.52),
-        dimensions: { width: Math.min(1.25, width * 0.26), height: 0.42, depth: Math.min(1.25, width * 0.26), provenance: observed },
+        dimensions: { width: Math.min(1.05, Math.max(0.48, Math.min(width, depth) * 0.2)), height: 0.44, depth: Math.min(1.05, Math.max(0.48, Math.min(width, depth) * 0.2)), provenance: observed },
         materialIds: ["oak-mid"],
         protected: false,
         provenance: observed,
@@ -149,10 +183,33 @@ function interiorBaseline(project: StudioProject): SpatialScene {
         category: "storage",
         assetId: "storage-bookcloth-low",
         transform: transform(Math.max(0.7, width * 0.82), 0, Math.max(0.3, depth * 0.1)),
-        dimensions: { width: Math.min(1.6, width * 0.3), height: 1.2, depth: 0.38, provenance: observed },
+        dimensions: { width: Math.min(1.6, Math.max(0.6, width * 0.28)), height: 0.78, depth: Math.min(0.42, Math.max(0.28, depth * 0.09)), provenance: observed },
         materialIds: ["bookcloth-walnut"],
         protected: storageObservation ? !storageObservation.likelyMovable : existing,
         provenance: observed,
+      },
+      {
+        id: "rug",
+        label: "Conversation rug",
+        category: "decor",
+        assetId: "rug-wool-flatweave",
+        placementClass: "floor_layer",
+        transform: transform(width * 0.5, 0, depth * 0.55),
+        dimensions: { width: Math.min(3, width * 0.72), height: 0.025, depth: Math.min(2.1, depth * 0.6), provenance: generated },
+        materialIds: ["wool-sand"],
+        protected: false,
+        provenance: generated,
+      },
+      {
+        id: "plant",
+        label: "Upright planter",
+        category: "plant",
+        assetId: "plant-ceramic-upright",
+        transform: transform(width * 0.86, 0, depth * 0.82),
+        dimensions: { width: Math.min(0.5, Math.max(0.34, width * 0.08)), height: Math.min(1.25, height * 0.44), depth: Math.min(0.5, Math.max(0.34, width * 0.08)), provenance: generated },
+        materialIds: ["foliage-olive", "ceramic-chalk"],
+        protected: false,
+        provenance: generated,
       },
     ],
     constraints: [
@@ -161,7 +218,7 @@ function interiorBaseline(project: StudioProject): SpatialScene {
         type: "clearance",
         severity: "review",
         message: "Keep a 900 mm circulation path through the entered room envelope.",
-        relatedIds: ["sofa", "table", "storage"],
+        relatedIds: ["sofa", "table", "storage", "plant"],
         thresholdMeters: 0.9,
         requiresProfessionalReview: false,
         provenance: entered,
@@ -267,7 +324,7 @@ function optionScene(base: SpatialScene, id: string, mutate: (scene: SpatialScen
 
 export function generateStudioOptions(project: StudioProject): StudioOption[] {
   const base = project.kind === "interior" ? interiorBaseline(project) : exteriorBaseline(project);
-  const { widthM: width, depthM: depth } = project.dimensions;
+  const { widthM: width, depthM: depth, heightM: height } = project.dimensions;
 
   const definitions = project.kind === "interior" ? [
     {
@@ -277,10 +334,13 @@ export function generateStudioOptions(project: StudioProject): StudioOption[] {
       rationale: `Uses the ${width.toFixed(1)} × ${depth.toFixed(1)} m entered envelope to keep the central route legible while gathering furniture at the edges.`,
       tradeoffs: ["More open floor area", "Less intimate seating distance", "Existing objects still need field verification"],
       mutate: (scene: SpatialScene) => {
-        const sofa = scene.objects.find((object) => object.id === "sofa");
-        const table = scene.objects.find((object) => object.id === "table");
-        if (sofa) sofa.transform.position = { x: width * 0.27, y: 0, z: depth * 0.18 };
-        if (table) table.transform.position = { x: width * 0.68, y: 0, z: depth * 0.58 };
+        placeObject(scene, "sofa", width * 0.24, depth * 0.22);
+        placeObject(scene, "table", width * 0.72, depth * 0.58);
+        placeObject(scene, "storage", width * 0.72, depth * 0.15);
+        placeObject(scene, "plant", width * 0.86, depth * 0.84);
+        placeObject(scene, "rug", width * 0.66, depth * 0.6);
+        const floor = scene.zones.find((zone) => zone.id === "floor");
+        if (floor) floor.materialId = "oak-natural";
       },
     },
     {
@@ -290,25 +350,35 @@ export function generateStudioOptions(project: StudioProject): StudioOption[] {
       rationale: "Brings seating and table into a compact relationship, leaving a quiet perimeter for storage, art, and lighting.",
       tradeoffs: ["Stronger social focus", "Tighter central clearance", "Best after opening locations are confirmed"],
       mutate: (scene: SpatialScene) => {
-        const sofa = scene.objects.find((object) => object.id === "sofa");
-        const table = scene.objects.find((object) => object.id === "table");
-        if (sofa) sofa.transform.position = { x: width * 0.3, y: 0, z: depth * 0.38 };
-        if (table) table.transform.position = { x: width * 0.65, y: 0, z: depth * 0.52 };
+        placeObject(scene, "sofa", width * 0.26, depth * 0.45, -Math.PI / 16);
+        placeObject(scene, "table", width * 0.7, depth * 0.5);
+        placeObject(scene, "storage", width * 0.5, depth * 0.15);
+        placeObject(scene, "plant", width * 0.86, depth * 0.82);
+        placeObject(scene, "rug", width * 0.5, depth * 0.52);
+        const rug = scene.objects.find((object) => object.id === "rug");
+        if (rug) rug.materialIds = ["wool-olive"];
+        scene.environment = { warmth: "warm", intensity: "normal" };
       },
     },
     {
-      id: "gallery-edge",
-      name: "Gallery Edge",
-      principle: "Keep one flexible wall and one active edge",
-      rationale: "Concentrates storage and seating along opposing edges so the room can switch between everyday use and larger gatherings.",
-      tradeoffs: ["Most flexible open centre", "Requires deliberate wall composition", "Storage depth needs on-site confirmation"],
+      id: "storage-led",
+      name: "Storage Led",
+      principle: "Make the storage wall the organizing spine",
+      rationale: "Concentrates storage on one legible edge, rotates seating across it, and leaves a flexible foreground for changing daily use.",
+      tradeoffs: ["Strongest storage capacity", "More directional seating", "Storage depth needs on-site confirmation"],
       mutate: (scene: SpatialScene) => {
         const storage = scene.objects.find((object) => object.id === "storage");
-        const table = scene.objects.find((object) => object.id === "table");
-        const sofa = scene.objects.find((object) => object.id === "sofa");
-        if (storage) storage.transform.position = { x: width * 0.5, y: 0, z: 0.25 };
-        if (table) table.transform.position = { x: width * 0.5, y: 0, z: depth * 0.7 };
-        if (sofa) sofa.transform.position = { x: width * 0.23, y: 0, z: depth * 0.42 };
+        if (storage) {
+          storage.assetId = "storage-bookcloth-tall";
+          storage.dimensions.height = Math.min(1.9, height * 0.7);
+        }
+        placeObject(scene, "storage", width * 0.5, depth * 0.15);
+        placeObject(scene, "sofa", width * 0.23, depth * 0.56, Math.PI / 2);
+        placeObject(scene, "table", width * 0.55, depth * 0.72);
+        placeObject(scene, "plant", width * 0.86, depth * 0.75);
+        placeObject(scene, "rug", width * 0.54, depth * 0.68, Math.PI / 2);
+        const rug = scene.objects.find((object) => object.id === "rug");
+        if (rug) rug.materialIds = ["wool-clay"];
         const floor = scene.zones.find((zone) => zone.id === "floor");
         if (floor) floor.materialId = "oak-smoked";
       },

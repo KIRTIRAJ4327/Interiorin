@@ -39,6 +39,7 @@ function scene(): SpatialScene {
         label: "Dining table",
         category: "table",
         assetId: "table-round",
+        placementClass: "solid",
         transform: {
           position: { x: 0, y: 0, z: 0 },
           rotation: { x: 0, y: 0, z: 0 },

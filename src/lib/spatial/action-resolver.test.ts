@@ -39,6 +39,7 @@ const scene: SpatialScene = {
       label: "Reading chair",
       category: "seating",
       assetId: "chair-demo",
+      placementClass: "solid",
       transform: {
         position: { x: 0, y: 0, z: 0 },
         rotation: { x: 0, y: 0, z: 0 },
@@ -54,6 +55,7 @@ const scene: SpatialScene = {
       label: "Heirloom cabinet",
       category: "storage",
       assetId: "cabinet-demo",
+      placementClass: "solid",
       transform: {
         position: { x: 2, y: 0, z: 1 },
         rotation: { x: 0, y: 0, z: 0 },

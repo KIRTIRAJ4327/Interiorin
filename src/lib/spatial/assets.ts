@@ -9,6 +9,18 @@ export type SpatialAssetVariant = {
   materialIds: string[];
 };
 
+export type ProceduralAssetFamily = "sofa" | "table" | "storage" | "rug" | "plant" | "tree" | "fallback";
+
+export function proceduralAssetFamily(object: Pick<SceneObject, "assetId" | "category" | "placementClass">): ProceduralAssetFamily {
+  if (object.placementClass === "floor_layer") return "rug";
+  if (object.category === "plant") return "plant";
+  if (object.category === "tree") return "tree";
+  if (object.category === "seating" && object.assetId.startsWith("sofa-")) return "sofa";
+  if (object.category === "table" && object.assetId.startsWith("table-")) return "table";
+  if (object.category === "storage" && object.assetId.startsWith("storage-")) return "storage";
+  return "fallback";
+}
+
 export const spatialAssetVariants: SpatialAssetVariant[] = [
   { id: "table-oak-round-compact", label: "compact round table", category: "table", aliases: ["small round table", "compact table"], dimensions: { width: 0.9, height: 0.74, depth: 0.9 }, materialIds: ["oak-mid"] },
   { id: "table-oak-rectangular-six", label: "six-seat rectangular table", category: "table", aliases: ["rectangular table", "six seat table", "long table"], dimensions: { width: 1.8, height: 0.75, depth: 0.9 }, materialIds: ["oak-mid"] },
@@ -16,6 +28,8 @@ export const spatialAssetVariants: SpatialAssetVariant[] = [
   { id: "sofa-linen-sectional", label: "large sectional sofa", category: "seating", aliases: ["sectional sofa", "large sofa"], dimensions: { width: 2.75, height: 0.82, depth: 1.55 }, materialIds: ["linen-oat"] },
   { id: "storage-bookcloth-low", label: "low storage console", category: "storage", aliases: ["low storage", "media console"], dimensions: { width: 1.6, height: 0.72, depth: 0.42 }, materialIds: ["bookcloth-walnut"] },
   { id: "storage-bookcloth-tall", label: "tall storage cabinet", category: "storage", aliases: ["tall storage", "tall cabinet"], dimensions: { width: 1.05, height: 1.9, depth: 0.48 }, materialIds: ["bookcloth-walnut"] },
+  { id: "rug-wool-flatweave", label: "flatweave wool rug", category: "decor", aliases: ["rug", "wool rug", "floor rug"], dimensions: { width: 2.4, height: 0.025, depth: 1.8 }, materialIds: ["wool-sand"] },
+  { id: "plant-ceramic-upright", label: "upright ceramic planter", category: "plant", aliases: ["plant", "indoor plant", "planter"], dimensions: { width: 0.48, height: 1.15, depth: 0.48 }, materialIds: ["foliage-olive", "ceramic-chalk"] },
   { id: "outdoor-bench-timber-compact", label: "compact outdoor bench", category: "seating", aliases: ["outdoor bench", "small bench"], dimensions: { width: 1.6, height: 0.78, depth: 0.72 }, materialIds: ["timber-weathered"] },
 ];
 
@@ -40,4 +54,3 @@ export function applySpatialAssetVariant(object: SceneObject, assetId: string) {
   object.materialIds = [...variant.materialIds];
   return true;
 }
-

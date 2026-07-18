@@ -2,16 +2,16 @@
 
 **Locked baseline:** `7e3a42e`  
 **Deadline:** July 21, 2026, 5:00 pm PT  
-**Current phase:** Phase 2 — believable canonical room
-**Status:** Phase 1 fallback checkpoint complete; production Supabase verification remains open
+**Current phase:** Phase 3 — guided phone intake and synchronized wall
+**Status:** Phase 2 complete; production Supabase verification remains open
 
 This is the single implementation ledger for the paired Phone Controller and Studio Wall release. Every phase records its verified commit and evidence before the next phase starts. Scope changes require an ADR under `docs/decisions/`.
 
 | Phase | Outcome | Status | Verified commit | Gate evidence |
 |---|---|---|---|---|
 | 0 | Scope lock, feature flags, clean baseline | Complete | `1e0d712` | Lint; strict TypeScript; 19 files / 58 tests; optimized build; Playwright 8 passed / 4 intentional skips; secret scan clean |
-| 1 | Real-device pairing transport proof | Fallback checkpoint complete | Phase 1 checkpoint | Pinned Supabase + QR dependencies; migration and explicit membership RLS; hashed one-use token; authenticated create/join/recover APIs; BroadcastChannel recovery; 23 files / 65 tests; production build; Playwright 10 passed / 6 intentional skips; desktop + Pixel 7 visuals inspected; secret scan clean |
-| 2 | Believable canonical room | Pending | — | — |
+| 1 | Real-device pairing transport proof | Fallback checkpoint complete | `419eb17` | Pinned Supabase + QR dependencies; migration and explicit membership RLS; hashed one-use token; authenticated create/join/recover APIs; BroadcastChannel recovery; 23 files / 65 tests; production build; Playwright 10 passed / 6 intentional skips; desktop + Pixel 7 visuals inspected; secret scan clean |
+| 2 | Believable canonical room | Complete | Phase 2 checkpoint | Procedural sofa/table/storage; canonical rug/plant; placement-aware validation; three visually inspected directions; minimum/representative envelope tests; 24 files / 76 tests; lint; strict TypeScript; production build; split desktop/Pixel Playwright matrix passed with slow WebGL budgets |
 | 3 | Guided phone intake and synchronized wall | Pending | — | — |
 | 4 | Checked refinement and Decision Trace | Pending | — | — |
 | 5 | Exact named-version comparison | Pending | — | — |

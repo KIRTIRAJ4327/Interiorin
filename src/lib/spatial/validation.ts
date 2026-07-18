@@ -56,6 +56,11 @@ function overlapDepth(first: Footprint, second: Footprint) {
   };
 }
 
+function isFloorLayerSolidPair(first: SceneObject, second: SceneObject) {
+  return first.placementClass !== second.placementClass
+    && (first.placementClass === "floor_layer" || second.placementClass === "floor_layer");
+}
+
 export function validateScene(scene: SpatialScene): SceneValidationReport {
   const findings: SceneValidationFinding[] = [];
   const bounds = envelope(scene);
@@ -81,6 +86,7 @@ export function validateScene(scene: SpatialScene): SceneValidationReport {
     for (let secondIndex = firstIndex + 1; secondIndex < scene.objects.length; secondIndex += 1) {
       const second = scene.objects[secondIndex];
       if (!second) continue;
+      if (isFloorLayerSolidPair(first, second)) continue;
       const firstBox = footprints.get(first.id)!;
       const secondBox = footprints.get(second.id)!;
       const overlap = overlapDepth(firstBox, secondBox);
@@ -106,6 +112,7 @@ export function validateScene(scene: SpatialScene): SceneValidationReport {
       for (let secondIndex = firstIndex + 1; secondIndex < related.length; secondIndex += 1) {
         const second = related[secondIndex];
         if (!second) continue;
+        if (isFloorLayerSolidPair(first, second)) continue;
         const pair = [first.id, second.id].sort();
         if (findings.some((finding) => finding.type === "overlap" && finding.relatedIds.join(":") === pair.join(":"))) continue;
         const gap = footprintGap(footprints.get(first.id)!, footprints.get(second.id)!);

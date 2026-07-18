@@ -52,6 +52,7 @@ function room(): SpatialScene {
         label: "Dining table",
         category: "table",
         assetId: "table",
+        placementClass: "solid",
         transform: {
           position: { x: 0.92, y: 0, z: 0 },
           rotation: { x: 0, y: 0, z: 0 },
@@ -67,6 +68,7 @@ function room(): SpatialScene {
         label: "Heirloom bookcase",
         category: "storage",
         assetId: "bookcase",
+        placementClass: "solid",
         transform: {
           position: { x: 3.2, y: 0, z: 0 },
           rotation: { x: 0, y: 0, z: 0 },

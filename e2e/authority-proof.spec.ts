@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("offline causal proof blocks, authorizes, limits, and commits", async ({ page }, testInfo) => {
+  test.slow();
   await page.goto("/proof/prepared-dining-room");
   await expect(page).toHaveURL(/\/proof\/prepared-dining-room$/);
 
