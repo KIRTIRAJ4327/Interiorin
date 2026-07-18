@@ -102,3 +102,32 @@ test("uploaded source observations become visible, non-metric scene evidence", a
   await expect(page.getByText(/AI presentation concept · not measured/i)).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("analyzed-source-studio.png"), fullPage: true });
 });
+
+test("refinement reports footprint impact and supports typed undo", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One browser is sufficient for the deterministic validation contract.");
+  await page.goto("/studio");
+  await page.getByRole("button", { name: "Empty space" }).click();
+  await page.getByRole("button", { name: /generate three spatial directions/i }).click();
+
+  await expect(page.getByText("Conflict found")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: /needs clearance review/i })).toBeVisible();
+  await page.getByLabel("Command").fill("Move the table right 10 m");
+  await page.getByRole("button", { name: "Compile action" }).click();
+  await page.getByRole("button", { name: /commit checked action/i }).click();
+  await expect(page.locator(".action-receipts").getByText("rejected")).toBeVisible();
+  await expect(page.locator(".action-receipts")).toContainText("outside the entered space envelope");
+
+  await page.getByLabel("Command").fill("Make the room warm and bright");
+  await page.getByRole("button", { name: "Compile action" }).click();
+  await page.getByRole("button", { name: /commit checked action/i }).click();
+  await expect(page.locator(".action-receipts")).toContainText("Environment set to warm, bright");
+  await page.getByLabel("Command").fill("Undo that");
+  await page.getByRole("button", { name: "Compile action" }).click();
+  await page.getByRole("button", { name: /commit checked action/i }).click();
+  await expect(page.locator(".action-receipts")).toContainText("Restored the previous committed canonical scene");
+  await page.getByLabel("Command").fill("Replace the sofa with a compact two-seat sofa");
+  await page.getByRole("button", { name: "Compile action" }).click();
+  await expect(page.getByText("Replace Suggested sofa with compact two-seat sofa.")).toBeVisible();
+  await page.getByRole("button", { name: /commit checked action/i }).click();
+  await expect(page.locator(".action-receipts")).toContainText("can be replaced with the checked variant");
+});

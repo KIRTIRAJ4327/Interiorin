@@ -51,4 +51,42 @@ describe("bounded studio refinement", () => {
     expect(result.receipt.status).toBe("accepted");
     expect(result.scene.zones.find((zone) => zone.id === "floor")?.materialId).toBe("limestone");
   });
+
+  it("compiles protection, lighting, and undo commands through typed actions", () => {
+    const scene = generateStudioOptions({ ...project, condition: "empty" })[0]!.scene;
+    expect(parseStudioRefinement(scene, "Lock the sofa")).toEqual(expect.objectContaining({
+      status: "ready",
+      action: { type: "protect_object", objectId: "sofa", protected: true },
+    }));
+
+    const lighting = parseStudioRefinement(scene, "Make the room warm and bright");
+    expect(lighting).toEqual(expect.objectContaining({
+      status: "ready",
+      action: { type: "set_environment", warmth: "warm", intensity: "bright" },
+    }));
+    if (lighting.status !== "ready") throw new Error("Expected a ready lighting action.");
+    const result = applyStudioRefinement(scene, lighting);
+    expect(result.scene.environment).toEqual({ warmth: "warm", intensity: "bright" });
+
+    expect(parseStudioRefinement(scene, "Undo that")).toEqual(expect.objectContaining({
+      status: "ready",
+      action: { type: "undo" },
+    }));
+  });
+
+  it("replaces an object only with a bounded, footprint-checked variant", () => {
+    const scene = generateStudioOptions({ ...project, condition: "empty" })[0]!.scene;
+    const compact = parseStudioRefinement(scene, "Replace the sofa with a compact two-seat sofa");
+    expect(compact).toEqual(expect.objectContaining({ status: "ready", action: expect.objectContaining({ type: "replace_object", assetId: "sofa-linen-compact" }) }));
+    if (compact.status !== "ready") throw new Error("Expected a ready replacement.");
+    const compactResult = applyStudioRefinement(scene, compact);
+    expect(compactResult.receipt.status).toBe("accepted");
+    expect(compactResult.scene.objects.find((object) => object.id === "sofa")?.dimensions.width).toBe(1.75);
+
+    const sectional = parseStudioRefinement(scene, "Replace the sofa with a large sectional sofa");
+    if (sectional.status !== "ready") throw new Error("Expected a ready replacement.");
+    const sectionalResult = applyStudioRefinement(scene, sectional);
+    expect(sectionalResult.receipt.status).toBe("rejected");
+    expect(sectionalResult.receipt.message).toMatch(/outside the entered space envelope/i);
+  });
 });

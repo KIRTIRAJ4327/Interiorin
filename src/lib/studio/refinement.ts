@@ -1,4 +1,5 @@
 import { resolveSceneAction } from "@/lib/spatial/action-resolver";
+import { applySpatialAssetVariant, availableSpatialAssetLabels, findSpatialAssetVariant } from "@/lib/spatial/assets";
 import { sceneActionSchema, type ActionReceipt, type SceneAction, type SpatialScene } from "@/lib/spatial/schema";
 
 export type ParsedRefinement =
@@ -29,6 +30,48 @@ function referencedObject(scene: SpatialScene, transcript: string) {
 export function parseStudioRefinement(scene: SpatialScene, transcript: string): ParsedRefinement {
   const normalized = transcript.trim().toLowerCase();
   const object = referencedObject(scene, normalized);
+
+  if (/^(?:undo|go back|revert)(?:\s+(?:that|last change))?$/.test(normalized)) {
+    return { status: "ready", action: sceneActionSchema.parse({ type: "undo" }), summary: "Undo the last committed scene change." };
+  }
+
+  const protectionMatch = normalized.match(/^(unprotect|unlock|protect|lock|keep)\s+(?:the\s+)?(.+?)(?:\s+in place)?$/);
+  if (protectionMatch && object) {
+    const command = protectionMatch[1];
+    const protect = command !== "unprotect" && command !== "unlock";
+    return {
+      status: "ready",
+      action: sceneActionSchema.parse({ type: "protect_object", objectId: object.id, protected: protect }),
+      summary: `${protect ? "Protect" : "Unprotect"} ${object.label}.`,
+    };
+  }
+
+  const environmentMatch = normalized.match(/^(?:make|set|change)\s+(?:the\s+)?(?:room|space|lighting|environment)?\s*(warm|cool|neutral)(?:\s+(?:and\s+)?(dim|normal|bright))?$/);
+  if (environmentMatch) {
+    const warmth = environmentMatch[1];
+    const intensity = environmentMatch[2] ?? "normal";
+    return {
+      status: "ready",
+      action: sceneActionSchema.parse({ type: "set_environment", warmth, intensity }),
+      summary: `Set the scene lighting to ${warmth} and ${intensity}.`,
+    };
+  }
+
+  const replacementMatch = normalized.match(/^(?:replace|swap|change)\s+(?:the\s+)?(.+?)\s+(?:with|for|to)\s+(?:a\s+|an\s+|the\s+)?(.+)$/);
+  if (replacementMatch && object) {
+    const variantPhrase = replacementMatch[2];
+    if (!variantPhrase) return { status: "needs_clarification", question: "Name the replacement variant." };
+    const variant = findSpatialAssetVariant(object.category, variantPhrase);
+    if (!variant) {
+      const available = availableSpatialAssetLabels(object.category);
+      return { status: "needs_clarification", question: available.length ? `Available ${object.category} variants: ${available.join(" or ")}.` : `No bounded replacement variant is available for ${object.label}.` };
+    }
+    return {
+      status: "ready",
+      action: sceneActionSchema.parse({ type: "replace_object", objectId: object.id, assetId: variant.id }),
+      summary: `Replace ${object.label} with ${variant.label}.`,
+    };
+  }
   const moveMatch = normalized.match(/(?:move|shift)\s+.+?\s+(left|right|east|west|forward|backward|back|north|south)\s+(\d+(?:\.\d+)?)\s*(cm|centimeters?|m|meters?)\b/);
 
   if (moveMatch && object) {
@@ -94,7 +137,9 @@ export function applyStudioRefinement(
     if (object) object.protected = action.protected;
   } else if (action.type === "replace_object") {
     const object = next.objects.find((candidate) => candidate.id === action.objectId);
-    if (object) object.assetId = action.assetId;
+    if (object) applySpatialAssetVariant(object, action.assetId);
+  } else if (action.type === "set_environment") {
+    next.environment = { warmth: action.warmth, intensity: action.intensity };
   }
   next.updatedAt = new Date().toISOString();
   return { scene: next, receipt };

@@ -16,6 +16,7 @@ export type SemanticSceneDiff = {
   materialChanges: ValueChange<string>[];
   addedConstraints: SpatialConstraint[];
   resolvedConstraints: SpatialConstraint[];
+  environmentChange?: ValueChange<{ warmth: "cool" | "neutral" | "warm"; intensity: "dim" | "normal" | "bright" }>;
 };
 
 function keyed<T extends { id: string }>(items: T[]): Map<string, T> {
@@ -86,10 +87,18 @@ export function compareScenes(before: SpatialScene, after: SpatialScene): Semant
   const objects = objectChanges(before, after);
   const beforeConstraints = keyed(before.constraints);
   const afterConstraints = keyed(after.constraints);
+  const beforeEnvironment = before.environment ?? { warmth: "neutral" as const, intensity: "normal" as const };
+  const afterEnvironment = after.environment ?? { warmth: "neutral" as const, intensity: "normal" as const };
   return {
     ...objects,
     materialChanges: zoneChanges(before.zones, after.zones),
     addedConstraints: after.constraints.filter((constraint) => !beforeConstraints.has(constraint.id)),
     resolvedConstraints: before.constraints.filter((constraint) => !afterConstraints.has(constraint.id)),
+    environmentChange: beforeEnvironment.warmth !== afterEnvironment.warmth || beforeEnvironment.intensity !== afterEnvironment.intensity ? {
+      id: "scene-environment",
+      label: "Lighting hypothesis",
+      before: beforeEnvironment,
+      after: afterEnvironment,
+    } : undefined,
   };
 }

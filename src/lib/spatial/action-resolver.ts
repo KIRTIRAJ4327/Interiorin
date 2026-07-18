@@ -1,4 +1,6 @@
-import type { ActionReceipt, SceneAction, SpatialScene, Vector3 } from "./schema";
+import type { ActionReceipt, SceneAction, SpatialScene } from "./schema";
+import { applySpatialAssetVariant } from "./assets";
+import { validateScene } from "./validation";
 
 type ResolverContext = {
   now?: () => Date;
@@ -33,19 +35,6 @@ function accepted(
     warnings,
     createdAt: (context.now?.() ?? new Date()).toISOString(),
   };
-}
-
-function insideZoneEnvelope(position: Vector3, scene: SpatialScene): boolean {
-  const points = scene.zones.flatMap((zone) => zone.polygon);
-  if (points.length === 0) return false;
-  const xs = points.map((point) => point.x);
-  const zs = points.map((point) => point.z);
-  return (
-    position.x >= Math.min(...xs) &&
-    position.x <= Math.max(...xs) &&
-    position.z >= Math.min(...zs) &&
-    position.z <= Math.max(...zs)
-  );
 }
 
 export function resolveSceneAction(
@@ -102,16 +91,38 @@ export function resolveSceneAction(
   }
 
   if (action.type === "replace_object") {
-    return accepted(action, `${object.label} can be replaced.`, [object.id], [], context);
+    const candidate = structuredClone(scene);
+    const candidateObject = candidate.objects.find((item) => item.id === object.id);
+    if (!candidateObject || !applySpatialAssetVariant(candidateObject, action.assetId)) {
+      return rejected(action, "That replacement is not a bounded variant for this object category.", context);
+    }
+    const beforeReport = validateScene(scene);
+    const candidateReport = validateScene(candidate);
+    const blocking = candidateReport.findings.find((finding) => finding.severity === "blocking" && finding.relatedIds.includes(object.id) && !beforeReport.findings.some((previous) => previous.id === finding.id));
+    if (blocking) return rejected(action, blocking.message, context);
+    const warnings = candidateReport.findings.filter((finding) => finding.severity === "review" && finding.relatedIds.includes(object.id)).map((finding) => finding.message);
+    return accepted(action, `${object.label} can be replaced with the checked variant.`, [object.id], warnings, context);
   }
 
-  if (!insideZoneEnvelope(action.position, scene)) {
-    return rejected(action, `${object.label} would move outside the known space.`, context);
-  }
+  const candidate = structuredClone(scene);
+  const candidateObject = candidate.objects.find((item) => item.id === object.id);
+  if (candidateObject) candidateObject.transform.position = action.position;
+  const beforeReport = validateScene(scene);
+  const candidateReport = validateScene(candidate);
+  const blocking = candidateReport.findings.find((finding) => {
+    if (finding.severity !== "blocking" || !finding.relatedIds.includes(object.id)) return false;
+    const previous = beforeReport.findings.find((candidateFinding) => candidateFinding.id === finding.id);
+    if (!previous) return true;
+    if (finding.measuredMeters === undefined || previous.measuredMeters === undefined) return true;
+    return finding.measuredMeters >= previous.measuredMeters - 0.001;
+  });
+  if (blocking) return rejected(action, blocking.message, context);
 
-  const warnings =
+  const warnings = candidateReport.findings
+    .filter((finding) => finding.severity === "review" && finding.relatedIds.includes(object.id))
+    .map((finding) => finding.message);
+  if (
     scene.calibration.status === "approximate"
-      ? ["Fit is approximate until the space is calibrated with a known measurement."]
-      : [];
+  ) warnings.push("Fit is approximate until the space is calibrated with a known measurement.");
   return accepted(action, `${object.label} can move to the requested position.`, [object.id], warnings, context);
 }

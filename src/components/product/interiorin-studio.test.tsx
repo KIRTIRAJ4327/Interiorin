@@ -52,6 +52,24 @@ describe("full Interiorin studio journey", () => {
     expect(screen.getByText(/Survey, setbacks, utilities, grade and drainage required/i)).toBeInTheDocument();
   });
 
+  it("commits lighting and restores the previous canonical state through undo", async () => {
+    render(<InteriorinStudio />);
+    fireEvent.click(screen.getByRole("button", { name: /empty space/i }));
+    fireEvent.click(screen.getByRole("button", { name: /generate three spatial directions/i }));
+    await screen.findAllByRole("radio");
+
+    fireEvent.change(screen.getByLabelText("Command"), { target: { value: "Make the room warm and bright" } });
+    fireEvent.click(screen.getByRole("button", { name: /compile action/i }));
+    expect(screen.getByText("Set the scene lighting to warm and bright.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /commit checked action/i }));
+    expect(screen.getByText(/Environment set to warm, bright/i)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Command"), { target: { value: "Undo that" } });
+    fireEvent.click(screen.getByRole("button", { name: /compile action/i }));
+    fireEvent.click(screen.getByRole("button", { name: /commit checked action/i }));
+    expect(screen.getByText("Restored the previous committed canonical scene.")).toBeInTheDocument();
+  });
+
   it("analyzes an uploaded space and carries visible observations into the workbench", async () => {
     vi.stubGlobal("URL", class MockURL extends URL {
       static createObjectURL = vi.fn(() => "blob:room");

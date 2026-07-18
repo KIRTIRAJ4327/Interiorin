@@ -156,6 +156,10 @@ export const spatialSceneSchema = z.object({
   kind: spaceKindSchema,
   sourceKind: z.enum(["photo", "floor_plan", "guided_views", "prepared_demo"]),
   calibration: calibrationSchema,
+  environment: z.object({
+    warmth: z.enum(["cool", "neutral", "warm"]),
+    intensity: z.enum(["dim", "normal", "bright"]),
+  }).optional(),
   zones: z.array(zoneSchema).min(1),
   openings: z.array(openingSchema),
   objects: z.array(sceneObjectSchema),

@@ -7,11 +7,13 @@ Interiorin is an evidence-aware spatial design studio for real interior and exte
 - Guided interior/exterior intake for empty or existing spaces, with user-entered width, depth, height, intent, and an optional image/PDF source.
 - Credential-gated Gemini visual analysis that identifies visible openings, retained objects, light, and style cues as confidence-scored, non-metric evidence; provider failure is disclosed and never blocks dimension-driven generation.
 - Three materially distinct, deterministic spatial options generated from the entered envelope, each with rationale and tradeoffs.
+- Footprint-aware validation of every option and committed state: full-object envelope checks, object-overlap detection, and measured clearance review—not center-point-only checks.
 - A canonical interactive 3D workbench with mouse/touch controls and an always-available semantic facts view.
 - Optional Nano Banana in-space presentation concepts generated from the source photograph and current canonical option, clearly separated from the measured/evidence-aware 3D record.
-- Bounded browser voice transcription or typed refinement, compiled to a visible typed action and committed only after explicit confirmation.
+- Bounded browser voice transcription or typed refinement for movement, surface material, retained-object protection, lighting warmth/intensity, and undo; every command compiles to a visible typed action and commits only after explicit confirmation.
 - Rejected mutations for protected existing objects, plus persistent action receipts.
 - Named local versions, factual scene comparison, and an architect/designer review package exported as JSON with sources, limitations, and open questions.
+- Version comparison includes movement, material, protection, replacement, lighting, and constraint deltas; handoff includes per-version spatial validation findings.
 - Blocking exterior review needs—including property boundary, survey, setbacks, utilities, grade, and drainage—kept visible in the workbench and handoff.
 - A prepared, calibrated dining-room scene rendered as interactive 3D with an always-available numeric fallback.
 - A typed 40 cm table-move proposal, clarified through GPT-5.6 Terra when configured or through a visibly labelled deterministic offline parser.
@@ -49,7 +51,7 @@ npm run build
 
 The browser suite builds and starts the production app, then runs the Studio and authority-proof journeys serially in desktop Chromium and mobile Chromium. Assertion screenshots are isolated under Playwright's disposable test output; curated proof render evidence is kept under `artifacts/screenshots/`.
 
-The current gate passes 17 test files / 45 tests, the optimized production build, and the production browser journeys across desktop/mobile with intentional skips for single-browser-only provider contracts. The original Forge proof verification remains in [docs/forge/verification-report.md](docs/forge/verification-report.md); the broader Studio slice is documented in [docs/studio-vertical-slice.md](docs/studio-vertical-slice.md).
+The current gate passes 18 test files / 53 tests, the optimized production build, and the production browser journeys across desktop/mobile with intentional skips for single-browser-only provider contracts. The original Forge proof verification remains in [docs/forge/verification-report.md](docs/forge/verification-report.md); the broader Studio slice is documented in [docs/studio-vertical-slice.md](docs/studio-vertical-slice.md).
 
 ## Truth boundaries
 

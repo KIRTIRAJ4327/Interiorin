@@ -292,8 +292,8 @@ export function generateStudioOptions(project: StudioProject): StudioOption[] {
       mutate: (scene: SpatialScene) => {
         const sofa = scene.objects.find((object) => object.id === "sofa");
         const table = scene.objects.find((object) => object.id === "table");
-        if (sofa) sofa.transform.position = { x: width * 0.36, y: 0, z: depth * 0.42 };
-        if (table) table.transform.position = { x: width * 0.57, y: 0, z: depth * 0.5 };
+        if (sofa) sofa.transform.position = { x: width * 0.3, y: 0, z: depth * 0.38 };
+        if (table) table.transform.position = { x: width * 0.65, y: 0, z: depth * 0.52 };
       },
     },
     {
@@ -305,8 +305,10 @@ export function generateStudioOptions(project: StudioProject): StudioOption[] {
       mutate: (scene: SpatialScene) => {
         const storage = scene.objects.find((object) => object.id === "storage");
         const table = scene.objects.find((object) => object.id === "table");
+        const sofa = scene.objects.find((object) => object.id === "sofa");
         if (storage) storage.transform.position = { x: width * 0.5, y: 0, z: 0.25 };
-        if (table) table.transform.position = { x: width * 0.48, y: 0, z: depth * 0.7 };
+        if (table) table.transform.position = { x: width * 0.5, y: 0, z: depth * 0.7 };
+        if (sofa) sofa.transform.position = { x: width * 0.23, y: 0, z: depth * 0.42 };
         const floor = scene.zones.find((zone) => zone.id === "floor");
         if (floor) floor.materialId = "oak-smoked";
       },

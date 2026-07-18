@@ -67,12 +67,15 @@ function Model({ scene, cameraPosition, target, width, depth, height }: {
   depth: number;
   height: number;
 }) {
+  const environment = scene.environment ?? { warmth: "neutral" as const, intensity: "normal" as const };
+  const background = environment.warmth === "warm" ? "#ead8c0" : environment.warmth === "cool" ? "#d9e3e5" : scene.kind === "interior" ? "#e8e0d3" : "#dfe3d5";
+  const lightIntensity = environment.intensity === "bright" ? 1.85 : environment.intensity === "dim" ? 0.72 : 1.45;
   return (
     <>
       <CameraSync position={cameraPosition} target={target} />
-      <color attach="background" args={[scene.kind === "interior" ? "#e8e0d3" : "#dfe3d5"]} />
-      <hemisphereLight intensity={0.95} />
-      <directionalLight position={[width * 0.75, Math.max(6, height * 2), depth * 0.85]} intensity={1.45} castShadow />
+      <color attach="background" args={[background]} />
+      <hemisphereLight intensity={environment.intensity === "dim" ? 0.45 : 0.95} color={environment.warmth === "warm" ? "#ffd8ae" : environment.warmth === "cool" ? "#d9efff" : "#ffffff"} />
+      <directionalLight position={[width * 0.75, Math.max(6, height * 2), depth * 0.85]} intensity={lightIntensity} color={environment.warmth === "warm" ? "#ffcf9f" : environment.warmth === "cool" ? "#d8edff" : "#ffffff"} castShadow />
       <mesh position={[width / 2, 0, depth / 2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[width, depth]} />
         <meshStandardMaterial color={scene.kind === "interior" ? "#e8e0d3" : "#b9b69d"} roughness={1} />
@@ -156,6 +159,8 @@ function SceneFacts({ scene, bounds }: { scene: SpatialScene; bounds: { width: n
   return (
     <div className="product-model-facts">
       <p><strong>Entered envelope</strong> {bounds.width.toFixed(2)} × {bounds.depth.toFixed(2)} × {bounds.height.toFixed(2)} m</p>
+      <p><strong>Lighting hypothesis</strong> {scene.environment?.warmth ?? "neutral"} · {scene.environment?.intensity ?? "normal"}</p>
+      {scene.openings.length ? <p><strong>Observed openings</strong> {scene.openings.map((opening) => `${opening.label} (${opening.provenance.confidence})`).join(", ")}</p> : null}
       <ul>{scene.objects.map((object) => <li key={object.id}><strong>{object.label}</strong><span>{object.dimensions.width.toFixed(2)} × {object.dimensions.depth.toFixed(2)} m · x {object.transform.position.x.toFixed(2)} · z {object.transform.position.z.toFixed(2)} · {object.provenance.authority.replaceAll("_", " ")}</span></li>)}</ul>
     </div>
   );

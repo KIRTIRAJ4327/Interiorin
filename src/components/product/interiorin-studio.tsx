@@ -27,6 +27,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useRef, useState, useTransition, type FormEvent } from "react";
 import { compareScenes } from "@/lib/spatial/diff";
 import type { SpatialScene } from "@/lib/spatial/schema";
+import { validateScene } from "@/lib/spatial/validation";
 import { spaceAnalysisEnvelopeSchema, type SpaceAnalysisEnvelope } from "@/lib/studio/analysis";
 import { conceptRenderEnvelopeSchema, type ConceptRenderEnvelope } from "@/lib/studio/presentation";
 import { generateStudioOptions } from "@/lib/studio/generator";
@@ -40,6 +41,7 @@ type StudioReceipt = {
   transcript: string;
   summary: string;
   status: "accepted" | "rejected";
+  warnings: string[];
   createdAt: string;
 };
 
@@ -80,6 +82,7 @@ export function InteriorinStudio() {
   const [options, setOptions] = useState<StudioOption[]>([]);
   const [selectedOptionId, setSelectedOptionId] = useState("");
   const [scene, setScene] = useState<SpatialScene>();
+  const [sceneHistory, setSceneHistory] = useState<SpatialScene[]>([]);
   const [command, setCommand] = useState("Move the table right 30 cm");
   const [parsedRefinement, setParsedRefinement] = useState<ParsedRefinement>();
   const [receipts, setReceipts] = useState<StudioReceipt[]>([]);
@@ -110,6 +113,8 @@ export function InteriorinStudio() {
   }, []);
 
   const selectedOption = options.find((option) => option.id === selectedOptionId);
+  const sceneValidation = useMemo(() => scene ? validateScene(scene) : undefined, [scene]);
+  const optionValidation = useMemo(() => new Map(options.map((option) => [option.id, validateScene(option.scene).status])), [options]);
   const projectVersions = versions.filter((version) => version.projectId === project?.id);
   const comparison = useMemo(() => {
     const first = versions.find((version) => version.id === firstCompareId);
@@ -189,6 +194,7 @@ export function InteriorinStudio() {
       setOptions(nextOptions);
       setSelectedOptionId(firstOption.id);
       setScene(structuredClone(firstOption.scene));
+      setSceneHistory([]);
       setReceipts([]);
       setParsedRefinement(undefined);
       setConceptRender(undefined);
@@ -199,6 +205,7 @@ export function InteriorinStudio() {
   function selectOption(option: StudioOption) {
     setSelectedOptionId(option.id);
     setScene(structuredClone(option.scene));
+    setSceneHistory([]);
     setParsedRefinement(undefined);
     setReceipts([]);
     setConceptRender(undefined);
@@ -211,14 +218,35 @@ export function InteriorinStudio() {
 
   function applyRefinement() {
     if (!scene || parsedRefinement?.status !== "ready") return;
+    if (parsedRefinement.action.type === "undo") {
+      const previous = sceneHistory[0];
+      const nextReceipt: StudioReceipt = {
+        id: crypto.randomUUID(),
+        transcript: command,
+        summary: previous ? "Restored the previous committed canonical scene." : "Nothing has been committed to undo.",
+        status: previous ? "accepted" : "rejected",
+        warnings: [],
+        createdAt: new Date().toISOString(),
+      };
+      if (previous) {
+        setScene(structuredClone(previous));
+        setSceneHistory((current) => current.slice(1));
+      }
+      setReceipts((current) => [nextReceipt, ...current]);
+      setParsedRefinement(undefined);
+      setConceptRender(undefined);
+      return;
+    }
     const result = applyStudioRefinement(scene, parsedRefinement);
     const nextReceipt: StudioReceipt = {
       id: result.receipt.id,
       transcript: command,
       summary: result.receipt.message,
       status: result.receipt.status,
+      warnings: result.receipt.warnings,
       createdAt: result.receipt.createdAt,
     };
+    if (result.receipt.status === "accepted") setSceneHistory((current) => [structuredClone(scene), ...current].slice(0, 20));
     setScene(result.scene);
     setReceipts((current) => [nextReceipt, ...current]);
     setParsedRefinement(undefined);
@@ -305,6 +333,7 @@ export function InteriorinStudio() {
     setOptions([]);
     setSelectedOptionId("");
     setScene(undefined);
+    setSceneHistory([]);
     setReceipts([]);
     setParsedRefinement(undefined);
     setFormError("");
@@ -321,6 +350,7 @@ export function InteriorinStudio() {
       scope: handoffScope,
       openQuestions,
       versions: projectVersions,
+      validation: projectVersions.map((version) => ({ versionId: version.id, versionName: version.name, ...validateScene(version.scene) })),
       limitations: [
         "Homeowner-entered dimensions and observed objects require field verification.",
         "This package is not survey, code, structural, drainage, utility, procurement, or construction certification.",
@@ -423,7 +453,7 @@ export function InteriorinStudio() {
               {options.map((option, index) => (
                 <button key={option.id} type="button" role="radio" aria-checked={option.id === selectedOptionId} className="reason-plate" onClick={() => selectOption(option)}>
                   <span className="option-number">0{index + 1}</span>
-                  <span><small>{option.principle}</small><strong>{option.name}</strong><span>{option.rationale}</span></span>
+                  <span><small>{option.principle}</small><strong>{option.name}</strong><span>{option.rationale}</span><ValidationBadge status={optionValidation.get(option.id) ?? "review"} /></span>
                   <ChevronRight aria-hidden="true" size={20} />
                 </button>
               ))}
@@ -444,6 +474,12 @@ export function InteriorinStudio() {
               </section> : null}
             </div>
             <aside className="reason-rail" aria-label="Option reasoning and refinement">
+              {sceneValidation ? <section className="validation-panel" data-status={sceneValidation.status} aria-labelledby="validation-title">
+                <p className="rail-kicker">Deterministic spatial check</p>
+                <h3 id="validation-title">{sceneValidation.status === "clear" ? "No footprint conflicts found." : sceneValidation.status === "blocked" ? "This state contains a blocking conflict." : "This state needs clearance review."}</h3>
+                <p>{sceneValidation.status === "clear" ? "All modeled object footprints sit inside the entered envelope without overlap." : "Checks use entered envelope dimensions and modeled object footprints—not hidden site conditions."}</p>
+                {sceneValidation.findings.length ? <ul>{sceneValidation.findings.map((finding) => <li key={finding.id} data-severity={finding.severity}><strong>{finding.type}</strong>{finding.message}</li>)}</ul> : null}
+              </section> : null}
               <section>
                 <p className="rail-kicker">Why it fits</p>
                 <h3>{selectedOption.principle}</h3>
@@ -473,7 +509,7 @@ export function InteriorinStudio() {
                 <h3>Say what should change.</h3>
                 <label htmlFor="refinement-command">Command</label>
                 <textarea id="refinement-command" rows={3} value={command} onChange={(event) => { setCommand(event.target.value); setParsedRefinement(undefined); }} />
-                <p className="field-help">Try “Move the table right 30 cm” or “Change the floor to limestone.” Voice only captures a transcript; it never commits automatically.</p>
+                <p className="field-help">Try “Move the table right 30 cm,” “Replace the sofa with a compact two-seat sofa,” “Lock the sofa,” “Make the room warm and bright,” or “Undo.” Voice only captures a transcript; it never commits automatically.</p>
                 <div className="composer-actions">
                   <button type="button" className="voice-button" data-listening={voiceState === "listening"} onClick={startVoice}>{voiceState === "listening" ? <MicOff aria-hidden="true" size={18} /> : <Mic aria-hidden="true" size={18} />}{voiceState === "listening" ? "Stop listening" : "Use voice"}</button>
                   <button type="button" className="product-secondary" onClick={prepareRefinement}>Compile action</button>
@@ -490,7 +526,7 @@ export function InteriorinStudio() {
                   </div>
                 ) : null}
               </section>
-              {receipts.length > 0 ? <section className="action-receipts"><p className="rail-kicker">Action receipts</p>{receipts.map((receipt) => <article key={receipt.id} data-status={receipt.status}><span>{receipt.status}</span><strong>{receipt.summary}</strong><small>{receipt.transcript}</small><time dateTime={receipt.createdAt}>{new Date(receipt.createdAt).toLocaleString()}</time></article>)}</section> : null}
+              {receipts.length > 0 ? <section className="action-receipts"><p className="rail-kicker">Action receipts</p>{receipts.map((receipt) => <article key={receipt.id} data-status={receipt.status}><span>{receipt.status}</span><strong>{receipt.summary}</strong><small>{receipt.transcript}</small>{receipt.warnings.map((warning) => <small key={warning} className="receipt-warning">Review · {warning}</small>)}<time dateTime={receipt.createdAt}>{new Date(receipt.createdAt).toLocaleString()}</time></article>)}</section> : null}
             </aside>
           </section>
 
@@ -555,12 +591,17 @@ function AnalysisLedger({ envelope }: { envelope: SpaceAnalysisEnvelope }) {
   );
 }
 
+function ValidationBadge({ status }: { status: "clear" | "review" | "blocked" }) {
+  return <span className="validation-badge" data-status={status}>{status === "clear" ? "Footprints clear" : status === "review" ? "Review clearance" : "Conflict found"}</span>;
+}
+
 function SemanticDiff({ first, second, diff }: { first: StudioVersion; second: StudioVersion; diff: ReturnType<typeof compareScenes> }) {
   const rows = [
     ["Objects added", diff.addedObjects.map((item) => item.label).join(", ") || "None"],
     ["Objects removed", diff.removedObjects.map((item) => item.label).join(", ") || "None"],
     ["Objects moved", diff.movedObjects.map((item) => `${item.label}: x ${item.before.x.toFixed(2)}→${item.after.x.toFixed(2)}, z ${item.before.z.toFixed(2)}→${item.after.z.toFixed(2)} m`).join("; ") || "None"],
     ["Materials", diff.materialChanges.map((item) => `${item.label}: ${item.before}→${item.after}`).join("; ") || "None"],
+    ["Lighting", diff.environmentChange ? `${diff.environmentChange.before.warmth}/${diff.environmentChange.before.intensity}→${diff.environmentChange.after.warmth}/${diff.environmentChange.after.intensity}` : "None"],
     ["Resolved constraints", diff.resolvedConstraints.map((item) => item.message).join("; ") || "None"],
   ];
   return (

@@ -107,6 +107,17 @@ describe("bounded scene action resolver", () => {
     );
 
     expect(receipt.status).toBe("rejected");
-    expect(receipt.message).toMatch(/outside the known space/i);
+    expect(receipt.message).toMatch(/outside the entered space envelope/i);
+  });
+
+  it("rejects a move that introduces a footprint collision", () => {
+    const receipt = resolveSceneAction(
+      scene,
+      { type: "move_object", objectId: "chair", position: { x: 2, y: 0, z: 1 } },
+      context,
+    );
+
+    expect(receipt.status).toBe("rejected");
+    expect(receipt.message).toMatch(/overlaps Heirloom cabinet/i);
   });
 });

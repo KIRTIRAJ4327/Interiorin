@@ -50,6 +50,7 @@ export const studioVersionSchema = z.object({
     transcript: z.string().min(1),
     summary: z.string().min(1),
     status: z.enum(["accepted", "rejected"]),
+    warnings: z.array(z.string().trim().min(1).max(280)).default([]),
     createdAt: z.string().datetime(),
   })),
   createdAt: z.string().datetime(),

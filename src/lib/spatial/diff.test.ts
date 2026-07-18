@@ -63,6 +63,7 @@ describe("semantic scene comparison", () => {
     after.objects[0]!.transform.position.x = 1;
     after.objects[0]!.assetId = "table-oval";
     after.zones[0]!.materialId = "walnut";
+    after.environment = { warmth: "warm", intensity: "bright" };
 
     const diff = compareScenes(before, after);
 
@@ -75,6 +76,10 @@ describe("semantic scene comparison", () => {
     expect(diff.materialChanges[0]).toMatchObject({
       before: "oak-light",
       after: "walnut",
+    });
+    expect(diff.environmentChange).toMatchObject({
+      before: { warmth: "neutral", intensity: "normal" },
+      after: { warmth: "warm", intensity: "bright" },
     });
   });
 });
