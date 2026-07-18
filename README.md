@@ -40,6 +40,8 @@ npm run build
 
 The browser suite builds and starts the production app, then runs the complete offline proof serially in desktop Chromium and mobile Chromium. Assertion screenshots are isolated under Playwright's disposable test output; curated render evidence is kept under `artifacts/screenshots/`.
 
+The approved release gate passes 11 test files / 31 tests plus three production browser journeys: desktop, Pixel 7, and a deterministic 375 px reduced-motion Canvas-boundary fallback. The final evidence and exact commands are in [docs/forge/verification-report.md](docs/forge/verification-report.md).
+
 ## Truth boundaries
 
 - The current scene is a disclosed prepared fixture, not arbitrary photo-to-metric reconstruction.
@@ -58,3 +60,4 @@ The active Forge run is designing the path from this proof to the larger Interio
 - Pipeline repository: `E:\Personal Project\forge`
 - Active run: `20260718-spatial-design-studio`
 - GitHub: <https://github.com/KIRTIRAJ4327/Interiorin>
+- Approved Forge package: [docs/forge/README.md](docs/forge/README.md)
