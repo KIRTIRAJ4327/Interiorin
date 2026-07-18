@@ -42,7 +42,7 @@ Passed on 2026-07-18:
 
 - `npm run lint`
 - `npm run typecheck`
-- `npm test` — 18 files, 57 tests
+- `npm test` — 19 files, 58 tests
 - `npm run build` — optimized Next.js production build
 - `npx playwright test e2e/studio.spec.ts` — desktop and Pixel 7 Studio flow, exterior boundary contract, analyzed-source contract, Nano Banana presentation boundary, and no horizontal overflow
 - `npm run test:e2e` — 8 passed across Studio and authority-proof journeys; 4 intentional skips for single-browser-only fallback/provider/validation contracts

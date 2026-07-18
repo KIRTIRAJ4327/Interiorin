@@ -26,6 +26,7 @@ import {
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState, useTransition, type FormEvent } from "react";
 import { compareScenes } from "@/lib/spatial/diff";
+import { productFeatures } from "@/lib/config/features";
 import type { SceneAction, SpatialScene } from "@/lib/spatial/schema";
 import { validateScene } from "@/lib/spatial/validation";
 import { spaceAnalysisEnvelopeSchema, type SpaceAnalysisEnvelope } from "@/lib/studio/analysis";
@@ -473,7 +474,7 @@ export function InteriorinStudio() {
             <div className="model-column">
               <div className="model-heading"><div><p className="product-eyebrow">03 · canonical workbench</p><h2 id="workbench-title">{selectedOption.name}</h2></div><span>{project.kind} · {project.dimensions.widthM.toFixed(1)} × {project.dimensions.depthM.toFixed(1)} m</span></div>
               <StudioModel scene={scene} onDirectAction={commitDirectAction} />
-              {sourceFile?.type.startsWith("image/") ? <section className="concept-studio" aria-labelledby="concept-title">
+              {productFeatures.conceptRender && sourceFile?.type.startsWith("image/") ? <section className="concept-studio" aria-labelledby="concept-title">
                 <div><p className="product-eyebrow">Presentation derivative</p><h3 id="concept-title">See this direction in the photographed space.</h3><p>Nano Banana can edit the source into a visual hypothesis. The canonical 3D scene and evidence ledger remain the decision record.</p></div>
                 {conceptRender?.status === "generated" && conceptRender.imageDataUrl ? <figure>
                   <Image src={conceptRender.imageDataUrl} alt={`AI-generated in-space concept for ${selectedOption.name}`} width={1200} height={800} unoptimized />

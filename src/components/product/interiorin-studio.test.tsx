@@ -122,8 +122,6 @@ describe("full Interiorin studio journey", () => {
     expect(await screen.findAllByRole("radio")).toHaveLength(3);
     expect(screen.getByText(/1 retained object · 1 opening/i)).toBeInTheDocument();
     expect(screen.getByText("Measure the window opening.")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Generate in-space concept" }));
-    expect(await screen.findByRole("img", { name: "AI-generated in-space concept for Clear Passage" })).toBeInTheDocument();
-    expect(screen.getByText("Presentation hypothesis only.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Generate in-space concept" })).not.toBeInTheDocument();
   });
 });

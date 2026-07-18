@@ -97,9 +97,7 @@ test("uploaded source observations become visible, non-metric scene evidence", a
   await expect(page.getByText(/1 retained object · 1 opening/i)).toBeVisible();
   await expect(page.getByText("Measure the window opening.")).toBeVisible();
   await expect(page.getByText(/No metric dimensions were inferred/i)).toBeVisible();
-  await page.getByRole("button", { name: "Generate in-space concept" }).click();
-  await expect(page.getByRole("img", { name: "AI-generated in-space concept for Clear Passage" })).toBeVisible();
-  await expect(page.getByText(/AI presentation concept · not measured/i)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Generate in-space concept" })).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath("analyzed-source-studio.png"), fullPage: true });
 });
 
