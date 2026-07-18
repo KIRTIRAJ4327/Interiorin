@@ -12,7 +12,8 @@ import { declareObjectDimensionsForSession } from "@/lib/spatial/fact-authority"
 import { clonePreparedScene } from "@/lib/spatial/prepared-scenes";
 import { buildAuthorityProof, type AuthorityProof } from "@/lib/spatial/proof";
 import type { SceneAction, SpatialScene } from "@/lib/spatial/schema";
-import { commitTruthContractOutcome, type SpatialCommitReceipt } from "@/lib/spatial/transaction";
+import { buildBasicReceipt, type BasicReceipt } from "@/lib/spatial/receipt";
+import { commitTruthContractOutcome } from "@/lib/spatial/transaction";
 import { evaluateTruthContract, type TruthContractOutcome } from "@/lib/spatial/truth-contract";
 import { SceneCanvas } from "./scene-canvas";
 
@@ -32,7 +33,7 @@ export function SpatialStudio() {
   const [scene, setScene] = useState<SpatialScene>(() => clonePreparedScene("interior"));
   const [stage, setStage] = useState<Stage>("ready");
   const [outcome, setOutcome] = useState<TruthContractOutcome>();
-  const [receipt, setReceipt] = useState<SpatialCommitReceipt>();
+  const [receipt, setReceipt] = useState<BasicReceipt>();
   const [providerMode, setProviderMode] = useState<ProposalProviderMode>();
   const [providerDisclosure, setProviderDisclosure] = useState("Intent has not been sent to a model.");
   const [isClarifying, setIsClarifying] = useState(false);
@@ -106,11 +107,22 @@ export function SpatialStudio() {
     setStage(next.decision === "limited" ? "limited" : "evidence_required");
   }
 
-  function acceptAlternative() {
-    if (!outcome) return;
+  async function acceptAlternative() {
+    if (!outcome || !proof) return;
     const committed = commitTruthContractOutcome(scene, outcome);
+    const decisionReceipt = await buildBasicReceipt(
+      scene,
+      committed.scene,
+      outcome,
+      proof,
+      {
+        mode: providerMode ?? "prepared_fallback",
+        model: providerMode === "gpt-5.6" ? "gpt-5.6-terra" : undefined,
+        disclosure: providerDisclosure,
+      },
+    );
     setScene(committed.scene);
-    setReceipt(committed.receipt);
+    setReceipt(decisionReceipt);
     setStage("committed");
   }
 
@@ -180,7 +192,7 @@ export function SpatialStudio() {
           </DecisionState> : null}
 
           {stage === "committed" && receipt ? <DecisionState className="receipt-state" kicker="COMMITTED WITH RECEIPT" title="The checked alternative is now canonical." body="Requested and committed actions remain distinct in the record." icon={<Check aria-hidden="true" size={15} />}>
-            <dl><div><dt>Requested</dt><dd>+40 cm</dd></div><div><dt>Committed</dt><dd>+18 cm</dd></div><div><dt>Decision</dt><dd>{receipt.decision}</dd></div><div><dt>Review queue</dt><dd>{receipt.professionalReviewFlagIds.length} item</dd></div></dl>
+            <dl><div><dt>Requested</dt><dd>+40 cm</dd></div><div><dt>Committed</dt><dd>+18 cm</dd></div><div><dt>Fact bases</dt><dd>{receipt.factBases.length} / 5</dd></div><div><dt>Review</dt><dd>{receipt.professionalReview.required ? receipt.professionalReview.status : "not required"}</dd></div><div><dt>Provider</dt><dd>{receipt.provider.mode === "gpt-5.6" ? "live Terra" : "offline"}</dd></div><div><dt>Policy</dt><dd>{receipt.policyRef.version}</dd></div></dl>
             <p className="receipt-id">Receipt {receipt.id.slice(0, 8)}</p>
           </DecisionState> : null}
           {proof ? <ProofPanel proof={proof} /> : null}

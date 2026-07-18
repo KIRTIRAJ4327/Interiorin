@@ -51,7 +51,7 @@ describe("authority-gated spatial proof", () => {
     expect(screen.getByText("40 cm fails. 18 cm passes.")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /accept 18 cm alternative/i }));
-    expect(screen.getByText("The checked alternative is now canonical.")).toBeInTheDocument();
+    expect(await screen.findByText("The checked alternative is now canonical.")).toBeInTheDocument();
     expect(screen.getByText("+18 cm", { selector: "dd" })).toBeInTheDocument();
   });
 });

@@ -57,7 +57,7 @@ export function canonicalBytes(value: unknown): Uint8Array {
   return new TextEncoder().encode(JSON.stringify(normalize(value)));
 }
 
-async function digest(value: unknown): Promise<ProjectionDigest> {
+export async function projectionDigest(value: unknown): Promise<ProjectionDigest> {
   const bytes = canonicalBytes(value);
   const digestInput =
     typeof Buffer !== "undefined"
@@ -166,12 +166,12 @@ export async function buildAuthorityProof(
   const authorityB = authorityProjection(passBScene);
   const [geometryBefore, geometryAfter, transactionBefore, transactionAfter, authorityBefore, authorityAfter] =
     await Promise.all([
-      digest(geometryA),
-      digest(geometryB),
-      digest(transactionA),
-      digest(transactionB),
-      digest(authorityA),
-      digest(authorityB),
+      projectionDigest(geometryA),
+      projectionDigest(geometryB),
+      projectionDigest(transactionA),
+      projectionDigest(transactionB),
+      projectionDigest(authorityA),
+      projectionDigest(authorityB),
     ]);
   const diff = authorityDiff(authorityA, authorityB);
   const geometryEqual = geometryBefore.hash === geometryAfter.hash;
