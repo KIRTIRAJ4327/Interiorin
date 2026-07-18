@@ -626,6 +626,14 @@ input:focus-visible {
   font-size: 0.7rem;
 }
 
+.proposal-card small {
+  display: block;
+  margin-top: var(--space-3);
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
 .decision-state {
   margin-top: var(--space-4);
   padding: var(--space-6);
@@ -720,6 +728,11 @@ input:focus-visible {
 
 .primary-button:hover {
   background: var(--blueprint);
+}
+
+.primary-button:disabled {
+  cursor: progress;
+  opacity: 0.62;
 }
 
 .check-list {

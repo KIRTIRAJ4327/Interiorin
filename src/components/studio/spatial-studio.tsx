@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import { ArrowRight, Check, CircleAlert, LockKeyhole, RotateCcw, Ruler, Sparkles } from "lucide-react";
+import {
+  preparedProposalFallback,
+  proposalToSceneAction,
+  type ProposalEnvelope,
+  type ProposalProviderMode,
+} from "@/lib/ai/proposal";
 import { recordVerifiedObjectDimensions } from "@/lib/spatial/fact-authority";
 import { clonePreparedScene } from "@/lib/spatial/prepared-scenes";
 import type { SceneAction, SpatialScene } from "@/lib/spatial/schema";
@@ -26,15 +32,44 @@ export function SpatialStudio() {
   const [stage, setStage] = useState<Stage>("ready");
   const [outcome, setOutcome] = useState<TruthContractOutcome>();
   const [receipt, setReceipt] = useState<SpatialCommitReceipt>();
+  const [providerMode, setProviderMode] = useState<ProposalProviderMode>();
+  const [providerDisclosure, setProviderDisclosure] = useState("Intent has not been sent to a model.");
+  const [isClarifying, setIsClarifying] = useState(false);
   const bookcase = scene.objects.find((object) => object.id === "bookcase");
   const previewPosition = outcome?.decision === "limited" && outcome.effectiveAction?.type === "move_object"
     ? outcome.effectiveAction.position
     : undefined;
 
-  function runCheck() {
-    const next = evaluateTruthContract(scene, demoAction);
+  async function runCheck() {
+    setIsClarifying(true);
+    let action = demoAction;
+    try {
+      const response = await fetch("/api/proposals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ request: demoRequest }),
+      });
+      if (!response.ok) throw new Error("Proposal endpoint rejected the request");
+      const envelope = (await response.json()) as ProposalEnvelope;
+      setProviderMode(envelope.mode);
+      setProviderDisclosure(envelope.disclosure);
+      if (envelope.result.status === "needs_clarification") {
+        setProviderDisclosure(envelope.result.question);
+        setIsClarifying(false);
+        return;
+      }
+      action = proposalToSceneAction(scene, envelope.result);
+    } catch {
+      const prepared = preparedProposalFallback(demoRequest);
+      setProviderMode("prepared_fallback");
+      setProviderDisclosure("Proposal endpoint unavailable; prepared deterministic clarification is active.");
+      if (prepared.status === "resolved") action = proposalToSceneAction(scene, prepared);
+    }
+
+    const next = evaluateTruthContract(scene, action);
     setOutcome(next);
     setStage(next.decision === "confirmation_required" ? "evidence_required" : "limited");
+    setIsClarifying(false);
   }
 
   function recordMeasurement() {
@@ -65,6 +100,9 @@ export function SpatialStudio() {
     setScene(clonePreparedScene("interior"));
     setOutcome(undefined);
     setReceipt(undefined);
+    setProviderMode(undefined);
+    setProviderDisclosure("Intent has not been sent to a model.");
+    setIsClarifying(false);
     setStage("ready");
   }
 
@@ -100,9 +138,12 @@ export function SpatialStudio() {
 
         <aside className="decision-panel" id="decision-panel" aria-labelledby="decision-title">
           <PanelHeading index="02" eyebrow="Pre-commit check" title="Decision trace" id="decision-title" />
-          <div className="proposal-card"><div className="proposal-source"><Sparkles aria-hidden="true" size={15} /> Clarified proposal</div><p>{demoRequest}</p><code>move(table_01, x: +0.40m)</code></div>
+          <div className="proposal-card">
+            <div className="proposal-source"><Sparkles aria-hidden="true" size={15} />{providerMode === "gpt-5.6" ? "GPT-5.6 typed proposal" : providerMode === "prepared_fallback" ? "Prepared typed proposal" : "Proposal awaiting check"}</div>
+            <p>{demoRequest}</p><code>move(table_01, x: +0.40m)</code><small>{providerDisclosure}</small>
+          </div>
 
-          {stage === "ready" ? <DecisionState kicker="READY TO CHECK" title="No scene mutation has been attempted." body="Run the exact proposal against every supporting fact and constraint."><ActionButton onClick={runCheck}>Check before commit</ActionButton></DecisionState> : null}
+          {stage === "ready" ? <DecisionState kicker="READY TO CHECK" title="No scene mutation has been attempted." body="Clarify the request, then run the exact proposal against every supporting fact and constraint."><ActionButton onClick={runCheck} disabled={isClarifying}>{isClarifying ? "Clarifying request…" : "Clarify and check"}</ActionButton></DecisionState> : null}
 
           {stage === "evidence_required" ? <DecisionState className="warning-state" kicker="CONFIRMATION REQUIRED" title="Geometry is computable. Authority is not." body="The bookcase bounds came from one image. Enter one measurement before Groundline exposes an actionable fit." icon={<CircleAlert aria-hidden="true" size={15} />}>
             <div className="measurement-row"><label htmlFor="bookcase-depth">Bookcase depth</label><div><input id="bookcase-depth" value="40" readOnly inputMode="decimal" /><span>cm</span></div></div>
@@ -138,6 +179,6 @@ function DecisionState({ kicker, title, body, icon, className = "", children }: 
   return <div className={`decision-state ${className}`} role="status"><p className="state-kicker">{icon}{kicker}</p><h3>{title}</h3><p>{body}</p>{children}</div>;
 }
 
-function ActionButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
-  return <button className="primary-button" type="button" onClick={onClick}>{children}<ArrowRight aria-hidden="true" size={17} /></button>;
+function ActionButton({ onClick, children, disabled = false }: { onClick: () => void | Promise<void>; children: React.ReactNode; disabled?: boolean }) {
+  return <button className="primary-button" type="button" onClick={onClick} disabled={disabled}>{children}<ArrowRight aria-hidden="true" size={17} /></button>;
 }

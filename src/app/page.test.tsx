@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/components/studio/scene-canvas", () => ({
   SceneCanvas: () => <div data-testid="scene-canvas">Prepared 3D scene</div>,
@@ -8,14 +8,36 @@ vi.mock("@/components/studio/scene-canvas", () => ({
 import Home from "./page";
 
 describe("authority-gated spatial proof", () => {
-  it("changes the outcome only after the supporting measurement gains authority", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("changes the outcome only after the supporting measurement gains authority", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          mode: "prepared_fallback",
+          disclosure: "Prepared deterministic clarification; OPENAI_API_KEY is not configured.",
+          result: {
+            status: "resolved",
+            summary: "Move the dining table 40 cm toward the bookcase.",
+            operation: "move_object",
+            targetId: "table",
+            requestedDeltaCm: 40,
+            axis: "x",
+            constraintIds: ["path-clearance"],
+          },
+        }),
+      }),
+    );
     render(<Home />);
 
     expect(screen.getByRole("heading", { name: "Authority ledger" })).toBeInTheDocument();
     expect(screen.getByText("Observed · unverified")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /check before commit/i }));
-    expect(screen.getByText("Geometry is computable. Authority is not.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /clarify and check/i }));
+    expect(await screen.findByText("Geometry is computable. Authority is not.")).toBeInTheDocument();
+    expect(screen.getByText("Prepared typed proposal")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /record measurement/i }));
     expect(screen.getByText("Only authority changed.")).toBeInTheDocument();
