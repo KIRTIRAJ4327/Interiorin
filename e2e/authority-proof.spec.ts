@@ -13,7 +13,11 @@ test("offline causal proof blocks, authorizes, limits, and commits", async ({ pa
   await expect(page.getByText("Prepared typed proposal")).toBeVisible();
   await expect(page.getByText("18 cm", { exact: false })).toHaveCount(0);
 
-  await page.getByRole("button", { name: /record measurement/i }).click();
+  const recordMeasurement = page.getByRole("button", { name: /record measurement/i });
+  await expect(recordMeasurement).toBeDisabled();
+  await page.getByRole("checkbox", { name: /i measured this 100 cm value/i }).check();
+  await expect(recordMeasurement).toBeEnabled();
+  await recordMeasurement.click();
   await expect(page.getByText("Only evidence authority changed.")).toBeVisible();
   await expect(page.getByText("MATCH")).toHaveCount(2);
   await page.screenshot({ path: testInfo.outputPath("studio-proof.png"), fullPage: true });

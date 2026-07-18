@@ -61,7 +61,11 @@ describe("authority-gated spatial proof", () => {
     );
     expect(screen.queryByRole("button", { name: /accept/i })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /record measurement/i }));
+    const recordMeasurement = screen.getByRole("button", { name: /record measurement/i });
+    expect(recordMeasurement).toBeDisabled();
+    fireEvent.click(screen.getByRole("checkbox", { name: /i measured this 100 cm value/i }));
+    expect(recordMeasurement).toBeEnabled();
+    fireEvent.click(recordMeasurement);
     expect(await screen.findByText("Only authority changed.")).toBeInTheDocument();
     expect(screen.queryByText("Observed · unverified")).not.toBeInTheDocument();
     expect(screen.getAllByText("User declared")).toHaveLength(3);

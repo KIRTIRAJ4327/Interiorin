@@ -42,6 +42,7 @@ export function SpatialStudio() {
   const [proof, setProof] = useState<AuthorityProof>();
   const [forceOffline, setForceOffline] = useState(false);
   const [frozenAction, setFrozenAction] = useState<SceneAction>();
+  const [measurementAttested, setMeasurementAttested] = useState(false);
   const bookcase = scene.objects.find((object) => object.id === "bookcase");
   const previewPosition = outcome?.decision === "limited" && outcome.effectiveAction?.type === "move_object"
     ? outcome.effectiveAction.position
@@ -155,6 +156,7 @@ export function SpatialStudio() {
     setProof(undefined);
     setForceOffline(false);
     setFrozenAction(undefined);
+    setMeasurementAttested(false);
     setStage("ready");
   }
 
@@ -201,7 +203,8 @@ export function SpatialStudio() {
 
           {stage === "evidence_required" ? <DecisionState className="warning-state" kicker="CONFIRMATION REQUIRED" title="Geometry is computable. Authority is not." body="The bookcase bounds came from one image. Enter one measurement before Interiorin exposes an actionable fit." icon={<CircleAlert aria-hidden="true" size={15} />}>
             <div className="measurement-row"><label htmlFor="bookcase-width">Bookcase width</label><div><input id="bookcase-width" value="100" readOnly inputMode="decimal" /><span>cm</span></div></div>
-            <ActionButton onClick={recordMeasurement}>Record measurement</ActionButton>
+            <label className="attestation-check"><input type="checkbox" checked={measurementAttested} onChange={(event) => setMeasurementAttested(event.target.checked)} /><span>I measured this 100 cm value for this session.</span></label>
+            <ActionButton onClick={recordMeasurement} disabled={!measurementAttested}>Record measurement</ActionButton>
           </DecisionState> : null}
 
           {stage === "evidence_recorded" ? <DecisionState className="verified-state" kicker="EVIDENCE RECORDED" title="Only authority changed." body="The coordinate, constraint, lock, and request are unchanged. Rerun the same check." icon={<Check aria-hidden="true" size={15} />}><ActionButton onClick={rerunSameCheck}>Rerun unchanged proposal</ActionButton></DecisionState> : null}

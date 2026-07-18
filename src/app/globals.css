@@ -993,6 +993,25 @@ input:focus-visible {
   line-height: 1.35;
 }
 
+.attestation-check {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  cursor: pointer;
+  color: var(--ink);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.attestation-check input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  accent-color: var(--moss);
+}
+
 @media (max-width: 1180px) {
   .studio-grid {
     grid-template-columns: minmax(16rem, 0.7fr) minmax(30rem, 1.5fr);
