@@ -10,7 +10,7 @@ import { evaluateTruthContract } from "./truth-contract";
 const action = {
   type: "move_object" as const,
   objectId: "table",
-  position: { x: 1.32, y: 0, z: 0 },
+  position: { x: 1.32, y: 0, z: 2 },
 };
 
 describe("minimal decision receipt", () => {
@@ -54,12 +54,30 @@ describe("minimal decision receipt", () => {
     expect(committed.receipt.requestedAction).toBe(selected);
     expect(receipt.requestedAction).toBe(selected);
     expect(receipt.factBases.map((fact) => fact.factId)).toEqual([
-      "table.center_x_mm",
-      "table.width_mm",
       "bookcase.center_x_mm",
       "bookcase.width_mm",
       "path.minimum_clearance_mm",
+      "table.center_x_mm",
+      "table.width_mm",
     ]);
+    expect(receipt.factBases.map((fact) => fact.basis)).toEqual([
+      "initial_source",
+      "authority_event",
+      "initial_source",
+      "initial_source",
+      "initial_source",
+    ]);
+    expect(receipt).toMatchObject({
+      schemaVersion: "interiorin.receipt/2",
+      versionId: "prepared-dining-room/session-v1",
+      requestedDeltaMm: 400,
+      committedDeltaMm: 180,
+      relationships: { geometry: "MATCH", transaction: "MATCH", authority: "1 FIELD" },
+      sessionAttestation: {
+        factId: "bookcase.width_mm",
+        statement: "I measured this 100 cm value for this session",
+      },
+    });
     expect(receipt.policyRef.hash).toMatch(/^sha256:[0-9a-f]{64}$/);
     expect(receipt.beforeCommitGeometryHash).not.toBe(receipt.afterCommitGeometryHash);
   });

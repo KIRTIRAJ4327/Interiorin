@@ -22,18 +22,25 @@ const policyBody = {
     "Early decision support only; not survey, code, structural, or construction certification.",
 };
 
-type FactBasis = {
+export type FactBasis = {
   factId: string;
+  valueMm: number;
   authority: string;
-  basis: "initial_source" | "session_attestation";
+  basis: "initial_source" | "authority_event";
+  sourceRef: string;
   sourceLabel: string;
+  sourceEventId?: string;
+  capturedAt?: string;
 };
 
 export type BasicReceipt = {
-  schemaVersion: "interiorin.receipt/1";
+  schemaVersion: "interiorin.receipt/2";
   id: string;
+  versionId: "prepared-dining-room/session-v1";
   sceneId: string;
   decision: "accepted" | "limited";
+  requestedDeltaMm: number;
+  committedDeltaMm: number;
   requestedAction: SceneAction;
   committedAction: SceneAction;
   provider: {
@@ -46,8 +53,10 @@ export type BasicReceipt = {
   factBases: FactBasis[];
   sessionAttestation: {
     factId: "bookcase.width_mm";
-    statement: "I measured this value for this session";
+    eventId: string;
+    statement: "I measured this 100 cm value for this session";
     sourceLabel: string;
+    recordedAt: string;
   };
   proof: {
     geometryBefore: ProjectionDigest;
@@ -65,6 +74,13 @@ export type BasicReceipt = {
   beforeCommitGeometryHash: `sha256:${string}`;
   afterCommitGeometryHash: `sha256:${string}`;
   sceneDiff: [{ entityId: "table"; field: "position.x_mm"; before: number; after: number }];
+  relationships: {
+    geometry: "MATCH";
+    transaction: "MATCH";
+    authority: "1 FIELD";
+  };
+  limitation: "Early decision support; not survey, code, structural, or construction certification.";
+  timeZone: "UTC";
   createdAt: string;
 };
 
@@ -77,14 +93,14 @@ function sourceForFact(scene: SpatialScene, factId: string) {
   const table = scene.objects.find((object) => object.id === "table");
   const bookcase = scene.objects.find((object) => object.id === "bookcase");
   const path = scene.constraints.find((constraint) => constraint.id === "path-clearance");
-  const sources: Record<string, string | undefined> = {
-    "table.center_x_mm": table?.provenance.sourceLabel,
-    "table.width_mm": table?.dimensions.provenance.sourceLabel,
-    "bookcase.center_x_mm": bookcase?.provenance.sourceLabel,
-    "bookcase.width_mm": (bookcase?.dimensions.widthProvenance ?? bookcase?.dimensions.provenance)?.sourceLabel,
-    "path.minimum_clearance_mm": path?.provenance.sourceLabel,
+  const sources = {
+    "table.center_x_mm": table?.provenance,
+    "table.width_mm": table?.dimensions.provenance,
+    "bookcase.center_x_mm": bookcase?.provenance,
+    "bookcase.width_mm": bookcase?.dimensions.widthProvenance ?? bookcase?.dimensions.provenance,
+    "path.minimum_clearance_mm": path?.provenance,
   };
-  return sources[factId] ?? "Unknown source";
+  return sources[factId as keyof typeof sources];
 }
 
 function xMillimeters(scene: SpatialScene, objectId: string) {
@@ -116,28 +132,49 @@ export async function buildBasicReceipt(
   ]);
   const facts = authorityProjection(beforeCommitScene);
   const bookcase = beforeCommitScene.objects.find((object) => object.id === "bookcase");
+  const tableBeforeMm = xMillimeters(beforeCommitScene, "table");
+  const requestedPositionMm =
+    outcome.requestedAction.type === "move_object"
+      ? Math.round(outcome.requestedAction.position.x * 1000)
+      : tableBeforeMm;
+  const committedPositionMm =
+    outcome.effectiveAction.type === "move_object"
+      ? Math.round(outcome.effectiveAction.position.x * 1000)
+      : tableBeforeMm;
+  const createdAt = (context.now?.() ?? new Date()).toISOString();
+  const widthSource = bookcase?.dimensions.widthProvenance ?? bookcase?.dimensions.provenance;
 
   return {
-    schemaVersion: "interiorin.receipt/1",
+    schemaVersion: "interiorin.receipt/2",
     id: context.id?.() ?? crypto.randomUUID(),
+    versionId: "prepared-dining-room/session-v1",
     sceneId: beforeCommitScene.id,
     decision: outcome.decision,
+    requestedDeltaMm: requestedPositionMm - tableBeforeMm,
+    committedDeltaMm: committedPositionMm - tableBeforeMm,
     requestedAction: outcome.requestedAction,
     committedAction: outcome.effectiveAction,
     provider,
     policyRef: { ...policyBody, hash: policy.hash },
-    factBases: facts.map((fact) => ({
-      factId: fact.factId,
-      authority: fact.authority,
-      basis: fact.factId === "bookcase.width_mm" ? "session_attestation" : "initial_source",
-      sourceLabel: sourceForFact(beforeCommitScene, fact.factId),
-    })),
+    factBases: facts.map((fact) => {
+      const source = sourceForFact(beforeCommitScene, fact.factId);
+      return {
+        factId: fact.factId,
+        valueMm: fact.valueMm,
+        authority: fact.authority,
+        basis: fact.factId === "bookcase.width_mm" ? "authority_event" : "initial_source",
+        sourceRef: source?.sourceRef ?? "prepared.unknown-source",
+        sourceLabel: source?.sourceLabel ?? "Unknown prepared source",
+        sourceEventId: source?.sourceEventId,
+        capturedAt: source?.capturedAt,
+      };
+    }),
     sessionAttestation: {
       factId: "bookcase.width_mm",
-      statement: "I measured this value for this session",
-      sourceLabel:
-        (bookcase?.dimensions.widthProvenance ?? bookcase?.dimensions.provenance)?.sourceLabel ??
-        "Missing source",
+      eventId: widthSource?.sourceEventId ?? "missing-session-event",
+      statement: "I measured this 100 cm value for this session",
+      sourceLabel: widthSource?.sourceLabel ?? "Missing source",
+      recordedAt: widthSource?.capturedAt ?? createdAt,
     },
     proof: {
       geometryBefore: proof.geometry.before,
@@ -162,6 +199,9 @@ export async function buildBasicReceipt(
         after: xMillimeters(afterCommitScene, "table"),
       },
     ],
-    createdAt: (context.now?.() ?? new Date()).toISOString(),
+    relationships: { geometry: "MATCH", transaction: "MATCH", authority: "1 FIELD" },
+    limitation: "Early decision support; not survey, code, structural, or construction certification.",
+    timeZone: "UTC",
+    createdAt,
   };
 }

@@ -7,7 +7,7 @@ import { evaluateTruthContract } from "./truth-contract";
 const move = {
   type: "move_object" as const,
   objectId: "table",
-  position: { x: 1.32, y: 0, z: 0 },
+  position: { x: 1.32, y: 0, z: 2 },
 };
 
 describe("truth-contract commit", () => {

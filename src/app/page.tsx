@@ -1,5 +1,5 @@
-import { SpatialStudio } from "@/components/studio/spatial-studio";
+import { redirect } from "next/navigation";
 
 export default function Home() {
-  return <SpatialStudio />;
+  redirect("/proof/prepared-dining-room");
 }

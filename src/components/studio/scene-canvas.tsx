@@ -1,113 +1,180 @@
 "use client";
 
-import { ContactShadows, Grid, OrbitControls } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
-import { Component, type ErrorInfo, type ReactNode } from "react";
+import { ContactShadows, Edges, OrbitControls } from "@react-three/drei";
+import { Canvas, useThree } from "@react-three/fiber";
+import { Minus, Plus, RotateCcw, RotateCw, Rows3 } from "lucide-react";
+import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from "react";
 import type { SpatialScene, Vector3 } from "@/lib/spatial/schema";
 
 type SceneCanvasProps = {
   scene: SpatialScene;
   previewPosition?: Vector3;
+  forceFailure?: boolean;
 };
 
-function Table({ position, ghost = false }: { position: Vector3; ghost?: boolean }) {
-  const color = ghost ? "#a9523b" : "#9a6a42";
-  const opacity = ghost ? 0.35 : 1;
+type CameraPosition = [number, number, number];
+const cameraTarget: CameraPosition = [2.6, 0.75, 2];
+const initialCamera: CameraPosition = [4.8, 4.2, 6.8];
+
+function Table({ position, dimensions, ghost = false }: { position: Vector3; dimensions: { width: number; height: number; depth: number }; ghost?: boolean }) {
+  const color = ghost ? "#2f596a" : "#8a6e52";
+  const opacity = ghost ? 0.28 : 1;
+  const insetX = dimensions.width / 2 - 0.16;
+  const insetZ = dimensions.depth / 2 - 0.14;
   const legs: Array<[number, number, number]> = [
-    [-0.55, 0.36, -0.3],
-    [0.55, 0.36, -0.3],
-    [-0.55, 0.36, 0.3],
-    [0.55, 0.36, 0.3],
+    [-insetX, dimensions.height / 2, -insetZ],
+    [insetX, dimensions.height / 2, -insetZ],
+    [-insetX, dimensions.height / 2, insetZ],
+    [insetX, dimensions.height / 2, insetZ],
   ];
 
   return (
     <group position={[position.x, 0, position.z]}>
-      <mesh position={[0, 0.73, 0]} castShadow={!ghost}>
-        <boxGeometry args={[1.4, 0.12, 0.9]} />
-        <meshStandardMaterial color={color} transparent={ghost} opacity={opacity} />
+      <mesh position={[0, dimensions.height - 0.06, 0]} castShadow={!ghost}>
+        <boxGeometry args={[dimensions.width, 0.12, dimensions.depth]} />
+        <meshStandardMaterial color={color} roughness={0.78} metalness={0} transparent={ghost} opacity={opacity} />
+        <Edges color="#2f596a" lineWidth={3} />
       </mesh>
       {legs.map(([x, y, z]) => (
         <mesh key={`${x}-${z}`} position={[x, y, z]} castShadow={!ghost}>
-          <boxGeometry args={[0.08, 0.72, 0.08]} />
-          <meshStandardMaterial color={color} transparent={ghost} opacity={opacity} />
+          <boxGeometry args={[0.08, dimensions.height - 0.12, 0.08]} />
+          <meshStandardMaterial color={color} roughness={0.78} metalness={0} transparent={ghost} opacity={opacity} />
         </mesh>
       ))}
     </group>
   );
 }
 
-function Bookcase() {
+function Bookcase({ position, dimensions }: { position: Vector3; dimensions: { width: number; height: number; depth: number } }) {
   return (
-    <group position={[3.2, 0, 0]}>
-      <mesh position={[0, 1, 0]} castShadow>
-        <boxGeometry args={[1, 2, 0.4]} />
-        <meshStandardMaterial color="#674b36" />
+    <group position={[position.x, 0, position.z]}>
+      <mesh position={[0, dimensions.height / 2, 0]} castShadow>
+        <boxGeometry args={[dimensions.width, dimensions.height, dimensions.depth]} />
+        <meshStandardMaterial color="#6f5b47" roughness={0.84} metalness={0} />
+        <Edges color="#202923" lineWidth={1} />
       </mesh>
-      {[0.38, 0.82, 1.26, 1.7].map((height) => (
-        <mesh key={height} position={[0, height, 0.22]}>
-          <boxGeometry args={[0.9, 0.045, 0.44]} />
-          <meshStandardMaterial color="#3f3027" />
+      {[0.36, 0.76, 1.16, 1.56].map((height) => (
+        <mesh key={height} position={[0, height, dimensions.depth / 2 + 0.01]}>
+          <boxGeometry args={[dimensions.width - 0.1, 0.04, dimensions.depth + 0.04]} />
+          <meshStandardMaterial color="#59483b" roughness={0.84} metalness={0} />
         </mesh>
       ))}
     </group>
   );
 }
 
-function Room({ scene, previewPosition }: SceneCanvasProps) {
+function CameraSync({ position }: { position: CameraPosition }) {
+  const { camera } = useThree();
+  useEffect(() => {
+    camera.position.set(...position);
+    camera.lookAt(...cameraTarget);
+    camera.updateProjectionMatrix();
+  }, [camera, position]);
+  return null;
+}
+
+function Room({ scene, previewPosition, cameraPosition, forceFailure }: SceneCanvasProps & { cameraPosition: CameraPosition }) {
+  if (forceFailure) throw new Error("Forced Canvas failure for resilience verification.");
   const table = scene.objects.find((object) => object.id === "table");
-  const tablePosition = table?.transform.position ?? { x: 0.92, y: 0, z: 0 };
+  const bookcase = scene.objects.find((object) => object.id === "bookcase");
+  if (!table || !bookcase) throw new Error("Prepared scene objects are incomplete.");
 
   return (
     <>
+      <CameraSync position={cameraPosition} />
       <color attach="background" args={["#e8e0d3"]} />
-      <ambientLight intensity={1.1} />
-      <directionalLight position={[-2, 6, 4]} intensity={2.2} castShadow />
-      <mesh position={[0.5, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[7, 4.5]} />
-        <meshStandardMaterial color="#c6aa80" roughness={0.9} />
+      <hemisphereLight intensity={0.9} />
+      <directionalLight position={[4, 7, 5]} intensity={1.6} castShadow />
+      <mesh position={[2.6, 0, 2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[5.2, 4]} />
+        <meshStandardMaterial color="#e8e0d3" roughness={1} />
+        <Edges color="#202923" lineWidth={1} />
       </mesh>
-      <mesh position={[0.5, 1.35, -2.25]} receiveShadow>
-        <boxGeometry args={[7, 2.7, 0.08]} />
-        <meshStandardMaterial color="#eee9df" roughness={1} />
+      <mesh position={[2.6, 1.35, 0]} receiveShadow>
+        <boxGeometry args={[5.2, 2.7, 0.04]} />
+        <meshStandardMaterial color="#fbfaf6" roughness={1} />
+        <Edges color="#202923" lineWidth={1} />
       </mesh>
-      <mesh position={[2.55, 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[0.9, 4.2]} />
-        <meshBasicMaterial color="#345b6b" transparent opacity={0.14} />
+      <mesh position={[0, 1.35, 2]} receiveShadow>
+        <boxGeometry args={[0.04, 2.7, 4]} />
+        <meshStandardMaterial color="#fbfaf6" roughness={1} />
+        <Edges color="#202923" lineWidth={1} />
       </mesh>
-      <Grid position={[0.5, 0.018, 0]} args={[7, 4.5]} cellColor="#7e7569" sectionColor="#345b6b" cellSize={0.25} sectionSize={1} fadeDistance={12} infiniteGrid={false} />
-      <Table position={tablePosition} />
-      {previewPosition && previewPosition.x !== tablePosition.x ? <Table position={previewPosition} ghost /> : null}
-      <Bookcase />
-      <mesh position={[0, 2.25, 0]}>
-        <sphereGeometry args={[0.2, 24, 24]} />
-        <meshStandardMaterial color="#f4eee2" emissive="#d8b66e" emissiveIntensity={0.5} />
-      </mesh>
-      <ContactShadows position={[0, 0.025, 0]} opacity={0.35} scale={8} blur={2.2} far={5} />
-      <OrbitControls makeDefault target={[0.5, 0.65, 0]} enablePan={false} minDistance={4.5} maxDistance={11} maxPolarAngle={Math.PI / 2.05} />
+      <Table position={table.transform.position} dimensions={table.dimensions} />
+      {previewPosition && previewPosition.x !== table.transform.position.x ? (
+        <Table position={previewPosition} dimensions={table.dimensions} ghost />
+      ) : null}
+      <Bookcase position={bookcase.transform.position} dimensions={bookcase.dimensions} />
+      <ContactShadows position={[2.6, 0.025, 2]} opacity={0.12} scale={7} blur={2.2} far={5} />
+      <OrbitControls
+        makeDefault
+        target={cameraTarget}
+        enablePan={false}
+        autoRotate={false}
+        minPolarAngle={(35 * Math.PI) / 180}
+        maxPolarAngle={(78 * Math.PI) / 180}
+        minAzimuthAngle={(-55 * Math.PI) / 180}
+        maxAzimuthAngle={(55 * Math.PI) / 180}
+        minDistance={5.2}
+        maxDistance={8.8}
+      />
     </>
   );
 }
 
 export function SceneCanvas(props: SceneCanvasProps) {
+  const [cameraPosition, setCameraPosition] = useState<CameraPosition>(initialCamera);
+  const [semanticOpen, setSemanticOpen] = useState(false);
+
+  function rotate() {
+    setCameraPosition(([x, y, z]) => {
+      const dx = x - cameraTarget[0];
+      const dz = z - cameraTarget[2];
+      const angle = (5 * Math.PI) / 180;
+      return [cameraTarget[0] + dx * Math.cos(angle) - dz * Math.sin(angle), y, cameraTarget[2] + dx * Math.sin(angle) + dz * Math.cos(angle)];
+    });
+  }
+
+  function zoom(scale: number) {
+    setCameraPosition(([x, y, z]) => [
+      cameraTarget[0] + (x - cameraTarget[0]) * scale,
+      cameraTarget[1] + (y - cameraTarget[1]) * scale,
+      cameraTarget[2] + (z - cameraTarget[2]) * scale,
+    ]);
+  }
+
   return (
     <div className="scene-canvas" aria-label="Interactive three-dimensional view of the prepared dining room">
+      <div className="canvas-controls" aria-label="3D view controls">
+        <button type="button" onClick={rotate} aria-label="Rotate view"><RotateCw aria-hidden="true" size={18} /></button>
+        <button type="button" onClick={() => zoom(0.9)} aria-label="Zoom in"><Plus aria-hidden="true" size={18} /></button>
+        <button type="button" onClick={() => zoom(1.1)} aria-label="Zoom out"><Minus aria-hidden="true" size={18} /></button>
+        <button type="button" onClick={() => setCameraPosition(initialCamera)} aria-label="Reset view"><RotateCcw aria-hidden="true" size={18} /></button>
+        <button type="button" onClick={() => setSemanticOpen((open) => !open)} aria-expanded={semanticOpen} aria-label="Open semantic scene"><Rows3 aria-hidden="true" size={18} /></button>
+      </div>
       <SceneErrorBoundary>
-        <Canvas shadows camera={{ position: [6.5, 4.4, 7.5], fov: 42 }} dpr={[1, 1.5]} fallback={<CanvasFallback />}>
-          <Room {...props} />
+        <Canvas shadows camera={{ position: initialCamera, fov: 38, near: 0.1, far: 50 }} dpr={[1, 1.5]} fallback={<CanvasFallback />}>
+          <Room {...props} cameraPosition={cameraPosition} />
         </Canvas>
       </SceneErrorBoundary>
-      <p className="canvas-help">Drag to orbit · Scroll to inspect scale</p>
+      {semanticOpen ? (
+        <dl className="canvas-semantic">
+          <div><dt>Prepared room</dt><dd>5,200 × 4,000 × 2,700 mm</dd></div>
+          <div><dt>Dining table</dt><dd>1,600 × 900 × 750 mm · centre x 920 mm</dd></div>
+          <div><dt>Heirloom bookcase</dt><dd>1,000 × 350 × 1,800 mm · centre x 3,300 mm</dd></div>
+          <div><dt>Required path</dt><dd>900 mm edge clearance</dd></div>
+        </dl>
+      ) : null}
+      <p className="canvas-help">User-controlled view · pan and auto-orbit disabled</p>
     </div>
   );
 }
 
 function CanvasFallback() {
   return (
-    <div className="canvas-fallback" role="img" aria-label="Numeric fallback for the prepared dining room">
-      <strong>3D unavailable · numeric proof remains active</strong>
-      <span>Table centre 920 mm</span>
-      <span>Bookcase centre 3200 mm</span>
-      <span>Required edge clearance 900 mm</span>
+    <div className="canvas-fallback" role="img" aria-label="Semantic fallback for the prepared dining room">
+      <strong>3D view unavailable. Continue with the complete semantic proof.</strong>
+      <span>Prepared geometry and the decision controls remain available outside this view.</span>
     </div>
   );
 }
@@ -120,7 +187,7 @@ class SceneErrorBoundary extends Component<{ children: ReactNode }, { failed: bo
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error("The 3D scene failed; numeric proof remains available.", error, info.componentStack);
+    console.error("The 3D scene failed; semantic proof remains available.", error, info.componentStack);
   }
 
   render() {

@@ -8,7 +8,7 @@ describe("prepared truth-contract scenes", () => {
     const action = {
       type: "move_object" as const,
       objectId: "table",
-      position: { x: 1.32, y: 0, z: 0 },
+      position: { x: 1.32, y: 0, z: 2 },
     };
     const before = evaluateTruthContract(preparedInteriorScene, action);
 
@@ -30,7 +30,7 @@ describe("prepared truth-contract scenes", () => {
     expect(measuredScene.objects.find((object) => object.id === "bookcase")?.dimensions.provenance.authority).toBe("observed_unverified");
     expect(after.effectiveAction).toMatchObject({
       type: "move_object",
-      position: { x: 1.1, y: 0, z: 0 },
+      position: { x: 1.1, y: 0, z: 2 },
     });
   });
 

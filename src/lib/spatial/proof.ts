@@ -10,9 +10,10 @@ export type ProjectionDigest = {
 
 export type AuthorityDiff = {
   factId: string;
-  field: "authority";
   before: string;
   after: string;
+  sourceEventIdBefore: string | null;
+  sourceEventIdAfter: string | null;
 };
 
 export type AuthorityProof = {
@@ -24,11 +25,11 @@ export type AuthorityProof = {
 };
 
 export const solverFactIds = [
-  "table.center_x_mm",
-  "table.width_mm",
   "bookcase.center_x_mm",
   "bookcase.width_mm",
   "path.minimum_clearance_mm",
+  "table.center_x_mm",
+  "table.width_mm",
 ] as const;
 
 function normalize(value: unknown): JsonValue {
@@ -141,12 +142,43 @@ export function authorityProjection(scene: SpatialScene) {
     throw new Error("The prepared solver dependency graph is incomplete.");
   }
 
+  const widthSource = bookcase.dimensions.widthProvenance ?? bookcase.dimensions.provenance;
   return [
-    { id: solverFactIds[0], factId: solverFactIds[0], authority: table.provenance.authority },
-    { id: solverFactIds[1], factId: solverFactIds[1], authority: table.dimensions.provenance.authority },
-    { id: solverFactIds[2], factId: solverFactIds[2], authority: bookcase.provenance.authority },
-    { id: solverFactIds[3], factId: solverFactIds[3], authority: (bookcase.dimensions.widthProvenance ?? bookcase.dimensions.provenance).authority },
-    { id: solverFactIds[4], factId: solverFactIds[4], authority: path.provenance.authority },
+    {
+      id: solverFactIds[0],
+      factId: solverFactIds[0],
+      valueMm: millimeters(bookcase.transform.position.x),
+      authority: bookcase.provenance.authority,
+      sourceEventId: bookcase.provenance.sourceEventId ?? null,
+    },
+    {
+      id: solverFactIds[1],
+      factId: solverFactIds[1],
+      valueMm: millimeters(bookcase.dimensions.width),
+      authority: widthSource.authority,
+      sourceEventId: widthSource.sourceEventId ?? null,
+    },
+    {
+      id: solverFactIds[2],
+      factId: solverFactIds[2],
+      valueMm: millimeters(path.thresholdMeters ?? 0),
+      authority: path.provenance.authority,
+      sourceEventId: path.provenance.sourceEventId ?? null,
+    },
+    {
+      id: solverFactIds[3],
+      factId: solverFactIds[3],
+      valueMm: millimeters(table.transform.position.x),
+      authority: table.provenance.authority,
+      sourceEventId: table.provenance.sourceEventId ?? null,
+    },
+    {
+      id: solverFactIds[4],
+      factId: solverFactIds[4],
+      valueMm: millimeters(table.dimensions.width),
+      authority: table.dimensions.provenance.authority,
+      sourceEventId: table.dimensions.provenance.sourceEventId ?? null,
+    },
   ];
 }
 
@@ -154,8 +186,18 @@ function authorityDiff(before: ReturnType<typeof authorityProjection>, after: Re
   const afterById = new Map(after.map((fact) => [fact.factId, fact]));
   return before.flatMap<AuthorityDiff>((fact) => {
     const changed = afterById.get(fact.factId);
-    return changed && changed.authority !== fact.authority
-      ? [{ factId: fact.factId, field: "authority", before: fact.authority, after: changed.authority }]
+    return changed && (
+      changed.authority !== fact.authority ||
+      changed.sourceEventId !== fact.sourceEventId ||
+      changed.valueMm !== fact.valueMm
+    )
+      ? [{
+          factId: fact.factId,
+          before: fact.authority,
+          after: changed.authority,
+          sourceEventIdBefore: fact.sourceEventId,
+          sourceEventIdAfter: changed.sourceEventId,
+        }]
       : [];
   });
 }
@@ -186,9 +228,13 @@ export async function buildAuthorityProof(
   const transactionEqual = transactionBefore.hash === transactionAfter.hash;
   const allowedAuthorityDiff =
     diff.length === 1 &&
-    diff[0]?.factId === solverFactIds[3] &&
+    diff[0]?.factId === "bookcase.width_mm" &&
     diff[0].before === "observed_unverified" &&
-    diff[0].after === "user_declared";
+    diff[0].after === "user_declared" &&
+    authorityA.find((fact) => fact.factId === "bookcase.width_mm")?.valueMm === 1000 &&
+    authorityB.find((fact) => fact.factId === "bookcase.width_mm")?.valueMm === 1000 &&
+    diff[0].sourceEventIdBefore === null &&
+    Boolean(diff[0].sourceEventIdAfter);
   const valid = geometryEqual && transactionEqual && allowedAuthorityDiff;
 
   return {

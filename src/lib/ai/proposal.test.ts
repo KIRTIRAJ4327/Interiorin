@@ -14,7 +14,7 @@ describe("typed proposal boundary", () => {
     expect(proposalToSceneAction(preparedInteriorScene, proposal)).toEqual({
       type: "move_object",
       objectId: "table",
-      position: { x: 1.32, y: 0, z: 0 },
+      position: { x: 1.32, y: 0, z: 2 },
     });
   });
 

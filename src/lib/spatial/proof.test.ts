@@ -6,17 +6,17 @@ import { authorityProjection, buildAuthorityProof, canonicalBytes } from "./proo
 const action = {
   type: "move_object" as const,
   objectId: "table",
-  position: { x: 1.32, y: 0, z: 0 },
+  position: { x: 1.32, y: 0, z: 2 },
 };
 
 describe("A/B authority proof", () => {
   it("enumerates exactly the five numeric facts consumed by the solver", () => {
-    expect(authorityProjection(preparedInteriorScene).map((fact) => fact.factId)).toEqual([
-      "table.center_x_mm",
-      "table.width_mm",
-      "bookcase.center_x_mm",
-      "bookcase.width_mm",
-      "path.minimum_clearance_mm",
+    expect(authorityProjection(preparedInteriorScene).map(({ factId, valueMm }) => ({ factId, valueMm }))).toEqual([
+      { factId: "bookcase.center_x_mm", valueMm: 3300 },
+      { factId: "bookcase.width_mm", valueMm: 1000 },
+      { factId: "path.minimum_clearance_mm", valueMm: 900 },
+      { factId: "table.center_x_mm", valueMm: 920 },
+      { factId: "table.width_mm", valueMm: 1600 },
     ]);
   });
 
@@ -34,9 +34,10 @@ describe("A/B authority proof", () => {
     expect(proof.authority.diff).toEqual([
       {
         factId: "bookcase.width_mm",
-        field: "authority",
         before: "observed_unverified",
         after: "user_declared",
+        sourceEventIdBefore: null,
+        sourceEventIdAfter: "session-width-attestation",
       },
     ]);
     expect(proof.geometry.before.hash).toMatch(/^sha256:[0-9a-f]{64}$/);
@@ -73,7 +74,7 @@ describe("A/B authority proof", () => {
       width: 1,
       sourceLabel: "Tape measurement in proof test",
     });
-    const differentAction = { ...action, position: { x: 1.31, y: 0, z: 0 } };
+    const differentAction = { ...action, position: { x: 1.31, y: 0, z: 2 } };
     const proof = await buildAuthorityProof(preparedInteriorScene, passB, action, differentAction);
 
     expect(proof.valid).toBe(false);

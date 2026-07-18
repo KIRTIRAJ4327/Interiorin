@@ -36,6 +36,9 @@ export const provenanceSchema = z.object({
   confidence: confidenceSchema,
   authority: authoritySchema,
   sourceLabel: z.string().trim().min(1).max(120),
+  sourceRef: z.string().trim().min(1).max(160).optional(),
+  sourceEventId: z.string().trim().min(1).max(160).optional(),
+  capturedAt: z.string().datetime().optional(),
   note: z.string().trim().max(280).optional(),
 });
 export type Provenance = z.infer<typeof provenanceSchema>;

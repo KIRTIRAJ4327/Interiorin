@@ -3,6 +3,9 @@ import type { SpatialScene } from "./schema";
 export type DeclaredWidth = {
   width: number;
   sourceLabel: string;
+  sourceRef?: string;
+  eventId?: string;
+  recordedAt?: string;
 };
 
 export function declareObjectWidthForSession(
@@ -27,6 +30,9 @@ export function declareObjectWidthForSession(
                 confidence: "high",
                 authority: "user_declared",
                 sourceLabel: measurement.sourceLabel,
+                sourceRef: measurement.sourceRef ?? "session.homeowner-tape-measurement",
+                sourceEventId: measurement.eventId ?? "session-width-attestation",
+                capturedAt: measurement.recordedAt ?? new Date().toISOString(),
                 note: "Homeowner measurement promoted width only from observed_unverified to user_declared for this session.",
               },
             },
