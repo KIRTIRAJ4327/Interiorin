@@ -1,0 +1,58 @@
+{
+  "name": "interiorin",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A voice-refinable spatial design studio for interiors and exteriors.",
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "check": "npm run lint && npm run typecheck && npm run test && npm run build"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.10"
+    }
+  },
+  "dependencies": {
+    "@elevenlabs/react": "1.10.1",
+    "@google/genai": "2.12.0",
+    "@radix-ui/react-dialog": "1.1.19",
+    "@react-three/drei": "10.7.7",
+    "@react-three/fiber": "9.6.1",
+    "clsx": "2.1.1",
+    "lucide-react": "1.25.0",
+    "motion": "12.42.2",
+    "next": "16.2.10",
+    "openai": "6.48.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "three": "0.185.1",
+    "zod": "4.4.3",
+    "zustand": "5.0.14"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.2",
+    "@types/node": "26.1.1",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@types/three": "0.185.1",
+    "@vitejs/plugin-react": "6.0.3",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.2.10",
+    "jsdom": "29.1.1",
+    "postcss": "8.5.10",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  }
+}

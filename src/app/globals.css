@@ -1,0 +1,265 @@
+:root {
+  --paper: #f3efe7;
+  --chalk: #fbf9f4;
+  --ink: #202923;
+  --muted: #5f675f;
+  --moss: #3f6756;
+  --blueprint: #345b6b;
+  --terracotta: #a9523b;
+  --charcoal: #252824;
+  --linen: #d8d0c3;
+  --rule: #8d8579;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--paper);
+  color: var(--ink);
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--paper);
+  font-family: var(--font-sans), sans-serif;
+}
+
+a {
+  color: inherit;
+}
+
+a:focus-visible {
+  outline: 2px solid var(--moss);
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: fixed;
+  left: var(--space-4);
+  top: var(--space-4);
+  z-index: 10;
+  padding: var(--space-3) var(--space-4);
+  background: var(--chalk);
+  border: 1px solid var(--ink);
+  transform: translateY(-200%);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+.foundation-page {
+  min-height: 100vh;
+  padding: 0 clamp(1rem, 4vw, 4rem) clamp(2rem, 6vw, 6rem);
+}
+
+.site-header {
+  min-height: 4.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--rule);
+}
+
+.wordmark {
+  font-family: var(--font-serif), serif;
+  font-size: 1.55rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.build-state,
+.eyebrow,
+.note-index,
+.foundation-number {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+
+.build-state,
+.note-index,
+.foundation-number {
+  color: var(--muted);
+}
+
+.foundation-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(18rem, 0.7fr);
+  gap: clamp(2rem, 7vw, 7rem);
+  align-items: end;
+  min-height: min(66vh, 46rem);
+  padding: clamp(4rem, 10vw, 8rem) 0 clamp(3rem, 7vw, 6rem);
+}
+
+.eyebrow {
+  margin: 0 0 var(--space-6);
+  color: var(--blueprint);
+}
+
+.hero-copy h1 {
+  margin: 0;
+  max-width: 12ch;
+  font-family: var(--font-serif), serif;
+  font-size: clamp(4rem, 9vw, 9rem);
+  font-weight: 400;
+  letter-spacing: -0.065em;
+  line-height: 0.84;
+}
+
+.lede {
+  max-width: 48rem;
+  margin: var(--space-8) 0 0;
+  font-size: clamp(1.05rem, 1.5vw, 1.3rem);
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+.status-note {
+  min-height: 22rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--space-8);
+  color: var(--chalk);
+  background: var(--charcoal);
+  border-radius: 0.625rem;
+}
+
+.status-note h2 {
+  margin: var(--space-6) 0 var(--space-4);
+  font-family: var(--font-serif), serif;
+  font-size: 2rem;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.status-note p:not(.note-index) {
+  color: var(--linen);
+  line-height: 1.6;
+}
+
+.status-note a {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: fit-content;
+  text-underline-offset: 0.3em;
+}
+
+.status-note a:focus-visible {
+  outline-color: var(--paper);
+}
+
+.foundation-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--rule);
+}
+
+.foundation-grid article {
+  position: relative;
+  min-height: 17rem;
+  padding: var(--space-8) clamp(1rem, 3vw, 3rem) var(--space-8) 0;
+  border-right: 1px solid var(--linen);
+}
+
+.foundation-grid article + article {
+  padding-left: clamp(1rem, 3vw, 3rem);
+}
+
+.foundation-grid article:last-child {
+  border-right: 0;
+}
+
+.foundation-grid svg {
+  margin-top: var(--space-12);
+  color: var(--moss);
+}
+
+.foundation-grid h2 {
+  margin: var(--space-4) 0 var(--space-3);
+  font-family: var(--font-serif), serif;
+  font-size: 1.65rem;
+  font-weight: 500;
+}
+
+.foundation-grid p {
+  max-width: 26rem;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+@media (max-width: 850px) {
+  .foundation-hero {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .hero-copy h1 {
+    font-size: clamp(3.5rem, 16vw, 6rem);
+  }
+
+  .status-note {
+    min-height: 20rem;
+  }
+
+  .foundation-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .foundation-grid article,
+  .foundation-grid article + article {
+    min-height: auto;
+    padding: var(--space-8) 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--linen);
+  }
+}
+
+@media (max-width: 480px) {
+  .build-state {
+    max-width: 12ch;
+    text-align: right;
+  }
+
+  .foundation-page {
+    padding-inline: var(--space-4);
+  }
+
+  .foundation-hero {
+    padding-top: var(--space-16);
+  }
+
+  .status-note {
+    padding: var(--space-6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
