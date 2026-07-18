@@ -73,8 +73,7 @@ function CameraSync({ position }: { position: CameraPosition }) {
   return null;
 }
 
-function Room({ scene, previewPosition, cameraPosition, forceFailure }: SceneCanvasProps & { cameraPosition: CameraPosition }) {
-  if (forceFailure) throw new Error("Forced Canvas failure for resilience verification.");
+function Room({ scene, previewPosition, cameraPosition }: SceneCanvasProps & { cameraPosition: CameraPosition }) {
   const table = scene.objects.find((object) => object.id === "table");
   const bookcase = scene.objects.find((object) => object.id === "bookcase");
   if (!table || !bookcase) throw new Error("Prepared scene objects are incomplete.");
@@ -125,6 +124,15 @@ function Room({ scene, previewPosition, cameraPosition, forceFailure }: SceneCan
 export function SceneCanvas(props: SceneCanvasProps) {
   const [cameraPosition, setCameraPosition] = useState<CameraPosition>(initialCamera);
   const [semanticOpen, setSemanticOpen] = useState(false);
+  const table = props.scene.objects.find((object) => object.id === "table");
+  const bookcase = props.scene.objects.find((object) => object.id === "bookcase");
+  const path = props.scene.constraints.find((constraint) => constraint.id === "path-clearance");
+  const floor = props.scene.zones.find((zone) => zone.kind === "floor");
+  const wall = props.scene.zones.find((zone) => zone.kind === "wall");
+
+  const roomWidth = floor ? Math.max(...floor.polygon.map((point) => point.x)) - Math.min(...floor.polygon.map((point) => point.x)) : undefined;
+  const roomDepth = floor ? Math.max(...floor.polygon.map((point) => point.z)) - Math.min(...floor.polygon.map((point) => point.z)) : undefined;
+  const roomHeight = wall ? Math.max(...wall.polygon.map((point) => point.y)) - Math.min(...wall.polygon.map((point) => point.y)) : undefined;
 
   function rotate() {
     setCameraPosition(([x, y, z]) => {
@@ -153,21 +161,42 @@ export function SceneCanvas(props: SceneCanvasProps) {
         <button type="button" onClick={() => setSemanticOpen((open) => !open)} aria-expanded={semanticOpen} aria-label="Open semantic scene"><Rows3 aria-hidden="true" size={18} /></button>
       </div>
       <SceneErrorBoundary>
-        <Canvas shadows camera={{ position: initialCamera, fov: 38, near: 0.1, far: 50 }} dpr={[1, 1.5]} fallback={<CanvasFallback />}>
-          <Room {...props} cameraPosition={cameraPosition} />
-        </Canvas>
+        {props.forceFailure ? <ForcedSceneFailure /> : (
+          <Canvas shadows camera={{ position: initialCamera, fov: 38, near: 0.1, far: 50 }} dpr={[1, 1.5]} fallback={<CanvasFallback />}>
+            <Room {...props} cameraPosition={cameraPosition} />
+          </Canvas>
+        )}
       </SceneErrorBoundary>
       {semanticOpen ? (
         <dl className="canvas-semantic">
-          <div><dt>Prepared room</dt><dd>5,200 × 4,000 × 2,700 mm</dd></div>
-          <div><dt>Dining table</dt><dd>1,600 × 900 × 750 mm · centre x 920 mm</dd></div>
-          <div><dt>Heirloom bookcase</dt><dd>1,000 × 350 × 1,800 mm · centre x 3,300 mm</dd></div>
-          <div><dt>Required path</dt><dd>900 mm edge clearance</dd></div>
+          <div><dt>Prepared room</dt><dd>{formatDimensions(roomWidth, roomDepth, roomHeight)}</dd></div>
+          <div><dt>Dining table</dt><dd>{formatObject(table)}</dd></div>
+          <div><dt>Heirloom bookcase</dt><dd>{formatObject(bookcase)}</dd></div>
+          <div><dt>Required path</dt><dd>{path?.thresholdMeters ? `${formatMillimeters(path.thresholdMeters)} edge clearance` : "Not available"}</dd></div>
         </dl>
       ) : null}
       <p className="canvas-help">User-controlled view · pan and auto-orbit disabled</p>
     </div>
   );
+}
+
+function ForcedSceneFailure(): ReactNode {
+  throw new Error("Forced Canvas failure for resilience verification.");
+}
+
+function formatMillimeters(meters: number) {
+  return `${Math.round(meters * 1000).toLocaleString("en-US")} mm`;
+}
+
+function formatDimensions(width?: number, depth?: number, height?: number) {
+  if (width === undefined || depth === undefined || height === undefined) return "Not available";
+  return `${formatMillimeters(width)} × ${formatMillimeters(depth)} × ${formatMillimeters(height)}`;
+}
+
+function formatObject(object: SpatialScene["objects"][number] | undefined) {
+  if (!object) return "Not available";
+  const { width, depth, height } = object.dimensions;
+  return `${formatDimensions(width, depth, height)} · centre x ${formatMillimeters(object.transform.position.x)}`;
 }
 
 function CanvasFallback() {

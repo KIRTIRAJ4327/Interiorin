@@ -67,6 +67,7 @@ describe("authority-gated spatial proof", () => {
     expect(recordMeasurement).toBeEnabled();
     fireEvent.click(recordMeasurement);
     expect(await screen.findByText("Only evidence authority changed.", { selector: "h2" })).toBeInTheDocument();
+    expect(headingLevels()).toEqual([1, 2, 2, 3, 2, 2, 2]);
     expect(screen.queryByText("Observed-unverified")).not.toBeInTheDocument();
     expect(screen.getAllByText("User-declared").length).toBeGreaterThanOrEqual(5);
     expect(screen.getAllByText("Only evidence authority changed.")).toHaveLength(2);
@@ -80,5 +81,15 @@ describe("authority-gated spatial proof", () => {
     fireEvent.click(screen.getByRole("button", { name: /accept 18 cm alternative/i }));
     expect(await screen.findByText("The checked alternative is now canonical.")).toBeInTheDocument();
     expect(screen.getByText("+180 mm", { selector: "dd" })).toBeInTheDocument();
+    expect(headingLevels()).toEqual([1, 2, 2, 3, 4, 4, 4, 4, 4, 2, 2, 2]);
+
+    const latestCanvasProps = sceneCanvasSpy.mock.lastCall?.[0] as { scene?: { objects?: Array<{ id: string; transform: { position: { x: number } } }> } } | undefined;
+    expect(latestCanvasProps?.scene?.objects?.find((object) => object.id === "table")?.transform.position.x).toBe(1.1);
+    expect(document.querySelector(".scene-metrics")).toHaveTextContent("Canonical table x 1,100 mm");
+    expect(document.querySelector(".receipt")).toHaveTextContent("table.position.x_mm 920 → 1100 mm");
   });
 });
+
+function headingLevels() {
+  return Array.from(document.querySelectorAll("h1, h2, h3, h4, h5, h6"), (heading) => Number(heading.tagName.slice(1)));
+}

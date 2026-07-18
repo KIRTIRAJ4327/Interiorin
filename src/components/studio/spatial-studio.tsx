@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   ArrowRight,
   BadgeCheck,
@@ -47,6 +47,15 @@ const factLabels: Record<string, string> = {
   "table.width_mm": "Table width",
 };
 
+function subscribeToLocationChange(onChange: () => void) {
+  window.addEventListener("popstate", onChange);
+  return () => window.removeEventListener("popstate", onChange);
+}
+
+function readCanvasFailureHarness() {
+  return new URLSearchParams(window.location.search).get("canvas") === "fallback";
+}
+
 export function SpatialStudio() {
   const [scene, setScene] = useState<SpatialScene>(() => clonePreparedScene("interior"));
   const [stage, setStage] = useState<Stage>("ready");
@@ -61,6 +70,7 @@ export function SpatialStudio() {
   const [forceOffline, setForceOffline] = useState(false);
   const [frozenAction, setFrozenAction] = useState<SceneAction>();
   const [measurementAttested, setMeasurementAttested] = useState(false);
+  const forceCanvasFailure = useSyncExternalStore(subscribeToLocationChange, readCanvasFailureHarness, () => false);
   const stateHeading = useRef<HTMLHeadingElement>(null);
 
   const previewPosition = outcome?.decision === "limited" && outcome.effectiveAction?.type === "move_object"
@@ -280,7 +290,7 @@ export function SpatialStudio() {
 
         <section className="scene-stage" aria-labelledby="scene-title">
           <div className="scene-toolbar"><div><p>Prepared 3D enhancement</p><h2 id="scene-title">Dining room · semantic proof remains primary</h2></div><span>Current geometry</span></div>
-          <SceneCanvas scene={scene} previewPosition={previewPosition} />
+          <SceneCanvas scene={scene} previewPosition={previewPosition} forceFailure={forceCanvasFailure} />
           <div className="scene-metrics">
             <span>Requested <strong>+400 mm</strong></span>
             <span>Authorized result <strong>{resultIsVisible ? "+180 mm" : "Withheld"}</strong></span>
@@ -328,7 +338,7 @@ function EventPanel({ scene }: { scene: SpatialScene }) {
   const source = scene.objects.find((object) => object.id === "bookcase")?.dimensions.widthProvenance;
   return (
     <section className="event-panel" aria-labelledby="event-title">
-      <h4 id="event-title">Recorded session event</h4>
+      <h3 id="event-title">Recorded session event</h3>
       <dl>
         <div><dt>Value</dt><dd>1,000 → 1,000 mm · unchanged</dd></div>
         <div><dt>Source</dt><dd>Visual estimate → homeowner tape measurement</dd></div>
@@ -380,7 +390,7 @@ function Receipt({ receipt }: { receipt: BasicReceipt }) {
   ] as const;
   return (
     <section className="receipt" aria-labelledby="receipt-title">
-      <h4 id="receipt-title">Decision receipt</h4>
+      <h3 id="receipt-title">Decision receipt</h3>
       <dl className="receipt-summary">
         <div><dt>Version / time</dt><dd>{receipt.versionId}<br /><time dateTime={receipt.createdAt}>{receipt.createdAt} · {receipt.timeZone}</time></dd></div>
         <div><dt>Requested</dt><dd>+{receipt.requestedDeltaMm} mm</dd></div>
@@ -390,15 +400,15 @@ function Receipt({ receipt }: { receipt: BasicReceipt }) {
         <div><dt>Provider</dt><dd>{receipt.provider.mode === "gpt-5.6-terra" ? `${receipt.provider.model} · response ${receipt.provider.requestId}` : "Prepared fallback · no model request"}</dd></div>
         <div><dt>Session attestation</dt><dd>{receipt.sessionAttestation.statement}<br /><code>{receipt.sessionAttestation.eventId}</code><br /><time dateTime={receipt.sessionAttestation.recordedAt}>{receipt.sessionAttestation.recordedAt}</time></dd></div>
       </dl>
-      <h5>Five authorizing bases</h5>
+      <h4>Five authorizing bases</h4>
       <ol className="receipt-bases">{receipt.factBases.map((fact) => <li key={fact.factId}><code>{fact.factId}</code><span>{fact.valueMm.toLocaleString("en-US")} mm · {fact.authority}</span><span>{fact.basis} · {fact.sourceLabel}</span><code>{fact.sourceEventId ?? fact.sourceRef}</code></li>)}</ol>
-      <h5>Six full proof hashes</h5>
+      <h4>Six full proof hashes</h4>
       <div className="receipt-hashes">{proofRows.map(([label, digest]) => <div key={label}><span>{label}</span><code>{digest.hash}</code><CopyDigest digest={digest.hash} label={`receipt ${label}`} /></div>)}</div>
-      <h5>Relationship summaries</h5>
+      <h4>Relationship summaries</h4>
       <p className="receipt-relationships">Geometry {receipt.relationships.geometry} · Transaction {receipt.relationships.transaction} · Authority {receipt.relationships.authority}</p>
-      <h5>Professional review</h5>
+      <h4>Professional review</h4>
       <p><strong>{receipt.professionalReview.status}</strong> · {receipt.professionalReview.reason}</p>
-      <h5>Checked scene diff</h5>
+      <h4>Checked scene diff</h4>
       <p><code>{receipt.sceneDiff[0].entityId}.{receipt.sceneDiff[0].field}</code> {receipt.sceneDiff[0].before} → {receipt.sceneDiff[0].after} mm</p>
       <p className="receipt-limitation">{receipt.limitation}</p>
     </section>
