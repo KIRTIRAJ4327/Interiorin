@@ -1,9 +1,16 @@
 # Interiorin
 
-Interiorin is an evidence-aware spatial design studio for real interior and exterior spaces. Its current judged slice proves one narrow mechanism: an unverified spatial fact may block a fit-sensitive change, but it cannot authorize one.
+Interiorin is an evidence-aware spatial design studio for real interior and exterior spaces. The product now includes a dimension-driven Studio for turning an entered space envelope into three reasoned, interactive directions, while preserving the original authority proof as a deeper technical demonstration.
 
 ## What works now
 
+- Guided interior/exterior intake for empty or existing spaces, with user-entered width, depth, height, intent, and optional local reference metadata.
+- Three materially distinct, deterministic spatial options generated from the entered envelope, each with rationale and tradeoffs.
+- A canonical interactive 3D workbench with mouse/touch controls and an always-available semantic facts view.
+- Bounded browser voice transcription or typed refinement, compiled to a visible typed action and committed only after explicit confirmation.
+- Rejected mutations for protected existing objects, plus persistent action receipts.
+- Named local versions, factual scene comparison, and an architect/designer review package exported as JSON with sources, limitations, and open questions.
+- Blocking exterior review needs—including property boundary, survey, setbacks, utilities, grade, and drainage—kept visible in the workbench and handoff.
 - A prepared, calibrated dining-room scene rendered as interactive 3D with an always-available numeric fallback.
 - A typed 40 cm table-move proposal, clarified through GPT-5.6 Terra when configured or through a visibly labelled deterministic offline parser.
 - A fail-closed authority gate: the visually estimated bookcase width produces `confirmation_required` and exposes no maximum-valid alternative.
@@ -24,7 +31,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. The proof works without credentials: turn on **Offline proof mode** before selecting **Clarify and check**.
+Open `http://localhost:3000` for the Studio. The deeper authority proof remains available at `http://localhost:3000/proof/prepared-dining-room` and works without credentials: turn on **Offline proof mode** before selecting **Clarify and check**.
 
 To exercise the conditional live proposal adapter, copy `.env.example` to `.env.local`, set `OPENAI_API_KEY`, verify a server-side canary against the exact `gpt-5.6-terra` model, record its genuine response ID in `OPENAI_CANARY_RESPONSE_ID`, then set `ENABLE_LIVE_OPENAI=true`. Any missing or aliased provenance forces the disclosed prepared fallback. The model converts language into a typed proposal only. Deterministic code owns evidence authority, geometry, alternatives, and mutation.
 
@@ -38,21 +45,24 @@ npm run test:e2e
 npm run build
 ```
 
-The browser suite builds and starts the production app, then runs the complete offline proof serially in desktop Chromium and mobile Chromium. Assertion screenshots are isolated under Playwright's disposable test output; curated render evidence is kept under `artifacts/screenshots/`.
+The browser suite builds and starts the production app, then runs the Studio and authority-proof journeys serially in desktop Chromium and mobile Chromium. Assertion screenshots are isolated under Playwright's disposable test output; curated proof render evidence is kept under `artifacts/screenshots/`.
 
-The approved release gate passes 11 test files / 31 tests plus three production browser journeys: desktop, Pixel 7, and a deterministic 375 px reduced-motion Canvas-boundary fallback. The final evidence and exact commands are in [docs/forge/verification-report.md](docs/forge/verification-report.md).
+The current gate passes 15 test files / 39 tests, the optimized production build, and six production browser journeys with two intentional skips for single-browser-only cases. The original Forge proof verification remains in [docs/forge/verification-report.md](docs/forge/verification-report.md); the broader Studio slice is documented in [docs/studio-vertical-slice.md](docs/studio-vertical-slice.md).
 
 ## Truth boundaries
 
-- The current scene is a disclosed prepared fixture, not arbitrary photo-to-metric reconstruction.
+- Studio geometry comes from dimensions entered by the user; an attached photo or plan contributes filename/type/size metadata only. There is no arbitrary photo-to-metric reconstruction yet.
+- Suggested furniture, planting, and materials are decision-support hypotheses, not observations, procurement advice, a survey, code review, or construction documentation.
+- Browser speech recognition provides transcription where supported. ElevenLabs is installed as an integration dependency but is not part of this credential-free slice.
+- Named versions persist in this browser's local storage; there is no account, cloud sync, or shared professional portal yet.
 - A homeowner declaration is scoped to the session and remains flagged for professional review.
 - The 3D scene renders canonical state; it does not decide spatial validity.
 - Provider failure never grants permission. Offline parsing is labelled and uses the same bounded proposal contract.
 - No API key belongs in Git. Use local or deployment secrets only.
 
-## Larger product direction
+## Next product frontier
 
-The active Forge run is designing the path from this proof to the larger Interiorin objective: guided intake for empty or existing spaces, interior and exterior rule packs, reasoned design options, bounded voice/keyboard refinement, named versions, factual comparison, generated presentation derivatives, and professional handoff. Those capabilities remain roadmap items until implemented and verified.
+The next frontier is calibrated photo/video or scan ingestion, richer editable geometry, image-based presentation derivatives, cloud projects and collaboration, live provider-backed voice, and a professional review portal. Those capabilities remain roadmap items until implemented and verified.
 
 ## Workspaces
 
