@@ -3,6 +3,7 @@
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import type { StudioCommand, StudioEvent, StudioSnapshot, StudioMemberRole } from "./schema";
 import { getAnonymousAccessToken, getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { applyStudioCommand, eventTypeForCommand } from "./reducer";
 
 export interface SessionTransport {
   connect(): Promise<void>;
@@ -34,7 +35,11 @@ export class BroadcastChannelSessionTransport implements SessionTransport {
   }
 
   async sendCommand(command: StudioCommand) {
-    this.publish(command.type === "end_session" ? "session_ended" : "brief_answered", { command });
+    const existing = this.readSnapshot();
+    if (existing.events.some((event) => event.payload.idempotencyKey === command.idempotencyKey)) return;
+    if (command.expectedRevision !== existing.revision) throw new Error(`Scene changed on another surface. Recover revision ${existing.revision} and try again.`);
+    const canonicalState = applyStudioCommand(existing.canonicalState, command, this.sessionId);
+    this.publish(eventTypeForCommand(command), { commandType: command.type, idempotencyKey: command.idempotencyKey }, canonicalState, existing.revision + 1);
   }
 
   subscribe(listener: (event: StudioEvent) => void) {
@@ -54,7 +59,7 @@ export class BroadcastChannelSessionTransport implements SessionTransport {
     this.listeners.clear();
   }
 
-  private publish(eventType: StudioEvent["eventType"], payload: Record<string, unknown>) {
+  private publish(eventType: StudioEvent["eventType"], payload: Record<string, unknown>, canonicalState?: Record<string, unknown>, revision?: number) {
     const existing = this.readSnapshot();
     const event: StudioEvent = {
       id: existing.lastEventId + 1,
@@ -64,7 +69,7 @@ export class BroadcastChannelSessionTransport implements SessionTransport {
       payload,
       createdAt: new Date().toISOString(),
     };
-    const snapshot = this.makeSnapshot([...existing.events, event]);
+    const snapshot = this.makeSnapshot([...existing.events, event], canonicalState ?? existing.canonicalState, revision ?? existing.revision);
     localStorage.setItem(this.storageKey, JSON.stringify(snapshot));
     this.channel?.postMessage({ event, snapshot } satisfies LocalMessage);
     this.listeners.forEach((listener) => listener(event));
@@ -75,14 +80,14 @@ export class BroadcastChannelSessionTransport implements SessionTransport {
     return raw ? (JSON.parse(raw) as StudioSnapshot) : this.makeSnapshot([]);
   }
 
-  private makeSnapshot(events: StudioEvent[]): StudioSnapshot {
+  private makeSnapshot(events: StudioEvent[], canonicalState: Record<string, unknown> = {}, revision = 0): StudioSnapshot {
     const controllerJoined = events.some((event) => event.eventType === "controller_joined");
     return {
       sessionId: this.sessionId,
       topic: `studio:${this.sessionId}`,
-      revision: 0,
+      revision,
       status: controllerJoined ? "active" : "pairing",
-      canonicalState: {},
+      canonicalState,
       lastEventId: events.at(-1)?.id ?? 0,
       events: events.slice(-500),
       members: controllerJoined

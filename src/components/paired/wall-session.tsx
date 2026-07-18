@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Check, CircleAlert, Link2, Radio, ScanLine, ShieldCheck } from "lucide-react";
-import type { SessionCreateEnvelope, StudioEvent } from "@/lib/session/schema";
+import { pairedCanonicalStateSchema, type PairedCanonicalState, type SessionCreateEnvelope, type StudioEvent } from "@/lib/session/schema";
 import { createSessionTransport } from "@/lib/session/transport";
+import { StudioModel } from "@/components/product/studio-model";
 
 export function WallSession({ sessionId }: { sessionId: string }) {
   const [session] = useState<SessionCreateEnvelope | null>(() => {
@@ -15,12 +16,23 @@ export function WallSession({ sessionId }: { sessionId: string }) {
   const [connection, setConnection] = useState<"connecting" | "waiting" | "paired" | "error">("connecting");
   const [events, setEvents] = useState<StudioEvent[]>([]);
   const [message, setMessage] = useState("Opening the private session channel…");
+  const [canonical, setCanonical] = useState<PairedCanonicalState>(() => pairedCanonicalStateSchema.parse({}));
+  const [wallMode, setWallMode] = useState<"explore" | "model">("explore");
 
   const mode = useMemo(() => session?.mode ?? (typeof window === "undefined" ? "same_device" : (localStorage.getItem(`interiorin:mode:${sessionId}`) as "supabase" | "same_device" | null) ?? "same_device"), [session, sessionId]);
 
   useEffect(() => {
     const transport = createSessionTransport(mode, sessionId, "wall");
     let mounted = true;
+    async function recover() {
+      const snapshot = await transport.recover().catch(() => null);
+      if (!mounted || !snapshot) return;
+      setEvents(snapshot.events);
+      setCanonical(pairedCanonicalStateSchema.parse(snapshot.canonicalState));
+      const paired = snapshot.members.some((member) => member.role === "controller");
+      setConnection(paired ? "paired" : "waiting");
+      setMessage(paired ? "Phone controller recovered and authenticated." : "Channel ready. Scan the code with the homeowner’s phone.");
+    }
     const unsubscribe = transport.subscribe((event) => {
       if (!mounted) return;
       setEvents((current) => [...current.filter((item) => item.id !== event.id), event].slice(-12));
@@ -28,24 +40,22 @@ export function WallSession({ sessionId }: { sessionId: string }) {
         setConnection("paired");
         setMessage("Phone controller authenticated. The wall is ready for room intake.");
       }
+      void recover();
     });
     void transport.connect().then(async () => {
       if (!mounted) return;
-      const snapshot = await transport.recover().catch(() => null);
-      if (!mounted) return;
-      setEvents(snapshot?.events ?? []);
-      const paired = snapshot?.members.some((member) => member.role === "controller") ?? false;
-      setConnection(paired ? "paired" : "waiting");
-      setMessage(paired ? "Phone controller recovered and authenticated." : "Channel ready. Scan the code with the homeowner’s phone.");
+      await recover();
     }).catch((cause: unknown) => {
       if (!mounted) return;
       setConnection("error");
       setMessage(cause instanceof Error ? cause.message : "The session channel could not connect.");
     });
-    return () => { mounted = false; unsubscribe(); void transport.dispose(); };
+    const poll = mode === "supabase" ? window.setInterval(() => void recover(), 1800) : undefined;
+    return () => { mounted = false; if (poll) window.clearInterval(poll); unsubscribe(); void transport.dispose(); };
   }, [mode, sessionId]);
 
   const joined = connection === "paired";
+  const selectedOption = canonical.options.find((option) => option.id === canonical.selectedOptionId) ?? canonical.options[0];
   return (
     <main className="wall-shell" id="main-content">
       <header className="wall-header">
@@ -53,7 +63,17 @@ export function WallSession({ sessionId }: { sessionId: string }) {
         <span className={`connection-pill connection-pill--${connection}`}><Radio size={16} aria-hidden="true" /> {joined ? "Phone paired" : connection}</span>
         <Link className="paired-text-link" href="/studio">Combined studio</Link>
       </header>
-      <section className="wall-stage" aria-labelledby="wall-title">
+      {canonical.options.length && selectedOption ? <section className="wall-product" aria-labelledby="wall-options-title">
+        <div className="wall-modebar"><div><p className="eyebrow">Canonical room · revision synchronized</p><h1 id="wall-options-title">{selectedOption.name}</h1></div><div role="group" aria-label="Wall mode"><button aria-pressed={wallMode === "explore"} onClick={() => setWallMode("explore")}>Explore</button><button aria-pressed={wallMode === "model"} onClick={() => setWallMode("model")}>Model</button></div></div>
+        <div className="wall-product-grid">
+          <div className="wall-canvas"><StudioModel scene={selectedOption.scene} /></div>
+          <aside className="wall-options-rail" aria-label="Generated room directions">
+            <p className="eyebrow">{wallMode === "explore" ? "Three checked directions" : "Selected direction"}</p>
+            {wallMode === "explore" ? canonical.options.map((option, index) => <article key={option.id} data-selected={option.id === selectedOption.id}><span>0{index + 1}</span><div><small>{option.principle}</small><h2>{option.name}</h2><p>{option.rationale}</p></div></article>) : <><h2>{selectedOption.principle}</h2><p>{selectedOption.rationale}</p><dl><div><dt>Envelope</dt><dd>{selectedOption.scene.zones[0]?.polygon[1]?.x.toFixed(1)} m declared width</dd></div><div><dt>Objects</dt><dd>{selectedOption.scene.objects.length} canonical objects</dd></div><div><dt>Authority</dt><dd>Dimensions entered on phone</dd></div></dl></>}
+            <div className="event-ribbon"><span>{events.length} verified events</span><code>{canonical.stage.toUpperCase()}</code></div>
+          </aside>
+        </div>
+      </section> : <section className="wall-stage" aria-labelledby="wall-title">
         <div className="wall-hero">
           <p className="eyebrow">Studio Wall · pairing proof</p>
           <h1 id="wall-title">{joined ? "The conversation can begin." : "Pair the room with this wall."}</h1>
@@ -81,7 +101,7 @@ export function WallSession({ sessionId }: { sessionId: string }) {
             <code>{mode === "supabase" ? "PRIVATE / REALTIME" : "DISCLOSED / SAME DEVICE"}</code>
           </div>
         </aside>
-      </section>
+      </section>}
     </main>
   );
 }

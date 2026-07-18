@@ -103,6 +103,27 @@ body {
 .decision-trace li.is-active { color: var(--declared); }
 .decision-trace li.is-active > span::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
 .event-ribbon { margin-top: auto; display: flex; justify-content: space-between; gap: 16px; padding-top: 16px; border-top: 1px solid var(--rule); color: var(--graphite); font-size: 12px; }
+.wall-product { min-height: calc(100dvh - 68px); }
+.wall-modebar { min-height: 92px; display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 14px 32px; border-bottom: 1px solid var(--control-boundary); background: var(--surface); }
+.wall-modebar h1 { margin: 2px 0 0; font-family: var(--font-serif), serif; font-size: 34px; font-weight: 500; }
+.wall-modebar [role="group"] { display: flex; }
+.wall-modebar button { min-width: 96px; min-height: 44px; border: 1px solid var(--control-boundary); background: transparent; }
+.wall-modebar button + button { border-left: 0; }
+.wall-modebar button[aria-pressed="true"] { color: var(--inverse); background: var(--charcoal); }
+.wall-product-grid { min-height: calc(100dvh - 160px); display: grid; grid-template-columns: minmax(0, 2fr) minmax(340px, 1fr); }
+.wall-canvas { min-width: 0; border-right: 1px solid var(--control-boundary); background: var(--model-ground); }
+.wall-canvas .product-model { min-height: calc(100dvh - 160px); }
+.wall-canvas canvas { min-height: calc(100dvh - 160px); }
+.wall-options-rail { display: flex; flex-direction: column; gap: 12px; padding: 28px; background: var(--surface); }
+.wall-options-rail article { display: grid; grid-template-columns: 34px 1fr; gap: 12px; padding: 16px 0; border-top: 1px solid var(--rule); opacity: .65; }
+.wall-options-rail article[data-selected="true"] { opacity: 1; border-top: 3px solid var(--verified); }
+.wall-options-rail article > span, .wall-options-rail small { color: var(--graphite); font-family: var(--font-mono), monospace; font-size: 11px; text-transform: uppercase; }
+.wall-options-rail h2 { margin: 3px 0 6px; font-family: var(--font-serif), serif; font-size: 27px; font-weight: 500; }
+.wall-options-rail p { margin: 0; color: var(--graphite); font-size: 13px; }
+.wall-options-rail dl { margin: 20px 0; border-top: 1px solid var(--rule); }
+.wall-options-rail dl div { display: grid; grid-template-columns: 90px 1fr; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--rule-soft); }
+.wall-options-rail dt { color: var(--graphite); font-family: var(--font-mono), monospace; font-size: 11px; text-transform: uppercase; }
+.wall-options-rail dd { margin: 0; }
 
 .phone-shell, .phone-status { min-height: 100dvh; max-width: 560px; margin: 0 auto; background: var(--surface); }
 .phone-shell { padding-bottom: max(24px, env(safe-area-inset-bottom)); border-inline: 1px solid var(--rule-soft); }
@@ -120,6 +141,37 @@ body {
 .phone-action span { display: flex; flex-direction: column; }
 .phone-action small { color: var(--graphite); font-size: 12px; }
 .phone-action:disabled { opacity: .72; }
+.phone-file { position: relative; cursor: pointer; }
+.phone-file input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.phone-photo { margin-top: 12px; padding: 10px; border: 1px solid var(--rule); background: var(--canvas); }
+.phone-photo img { width: 100%; max-height: 220px; display: block; object-fit: cover; }
+.phone-photo span { display: block; margin-top: 8px; color: var(--graphite); font-family: var(--font-mono), monospace; font-size: 11px; }
+.phone-dimensions, .retained-list { margin: 24px 0; padding: 0; border: 0; }
+.phone-dimensions legend, .retained-list legend { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-weight: 600; }
+.phone-dimensions label { min-height: 56px; display: grid; grid-template-columns: 1fr 110px 22px; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--rule); border-bottom: 0; }
+.phone-dimensions label:last-child { border-bottom: 1px solid var(--rule); }
+.phone-dimensions input { width: 100%; min-height: 40px; padding: 4px 8px; border: 1px solid var(--control-boundary); background: var(--surface); }
+.phone-continue { width: 100%; justify-content: center; }
+.retained-list label { min-height: 60px; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--rule); border-bottom: 0; }
+.retained-list label:last-child { border-bottom: 1px solid var(--rule); }
+.retained-list input { width: 22px; height: 22px; }
+.retained-list span { display: flex; flex-direction: column; }
+.retained-list small { color: var(--graphite); }
+.phone-question { display: block; margin: 20px 0; }
+.phone-question label { font-weight: 600; }
+.phone-question textarea { width: 100%; min-height: 88px; display: block; margin-top: 8px; padding: 10px; resize: vertical; border: 1px solid var(--control-boundary); background: var(--surface); }
+.phone-question > button { min-height: 44px; display: inline-flex; align-items: center; gap: 7px; margin-top: 6px; padding: 0 10px; color: var(--ink); background: transparent; border: 1px solid var(--control-boundary); font-size: 13px; }
+.phone-options { display: grid; gap: 10px; }
+.phone-options button { min-height: 128px; display: grid; grid-template-columns: 56px 1fr 20px; align-items: center; gap: 12px; padding: 12px; color: var(--ink); background: var(--surface); border: 1px solid var(--control-boundary); text-align: left; }
+.phone-options button[aria-pressed="true"] { border: 2px solid var(--verified); background: #f2f4ed; }
+.phone-options button > span:nth-child(2) { display: flex; flex-direction: column; }
+.phone-options small { color: var(--graphite); font-family: var(--font-mono), monospace; font-size: 10px; text-transform: uppercase; }
+.phone-options strong { margin: 4px 0; font-family: var(--font-serif), serif; font-size: 24px; font-weight: 500; }
+.phone-options em { color: var(--graphite); font-size: 12px; font-style: normal; }
+.phone-swatches { display: flex; height: 72px; overflow: hidden; border: 1px solid var(--rule); }
+.phone-swatches i { flex: 1; background: #c7ad82; }
+.phone-swatches i:nth-child(2) { background: #b49a72; }
+.phone-swatches i:nth-child(3) { background: #617052; }
 .phase-note { margin-top: 28px; padding: 12px; color: var(--graphite); background: var(--model-ground); border-left: 4px solid var(--inferred); font-size: 13px; }
 .phone-status { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 32px; }
 .phone-status > div { width: 52px; height: 52px; display: grid; place-items: center; margin-bottom: 28px; color: var(--inverse); background: var(--charcoal); }
@@ -132,6 +184,8 @@ body {
   .wall-stage { grid-template-columns: 1fr; }
   .wall-hero { min-height: calc(100dvh - 68px); border-right: 0; border-bottom: 1px solid var(--control-boundary); }
   .decision-trace { min-height: 620px; }
+  .wall-product-grid { grid-template-columns: 1fr; }
+  .wall-canvas { border-right: 0; border-bottom: 1px solid var(--control-boundary); }
 }
 @media (max-width: 520px) {
   .paired-entry { width: 100%; border: 0; }

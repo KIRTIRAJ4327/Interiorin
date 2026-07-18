@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { spaceAnalysisSchema } from "@/lib/studio/analysis";
+import { studioOptionSchema } from "@/lib/studio/schema";
 
 export const studioMemberRoleSchema = z.enum(["wall", "controller"]);
 export type StudioMemberRole = z.infer<typeof studioMemberRoleSchema>;
@@ -12,8 +14,8 @@ const commandBase = {
 };
 
 export const studioCommandSchema = z.discriminatedUnion("type", [
-  z.object({ ...commandBase, type: z.literal("submit_source"), sourceObjectPath: z.string().min(3).max(300), mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]), byteSize: z.number().int().positive().max(5 * 1024 * 1024) }),
-  z.object({ ...commandBase, type: z.literal("confirm_analysis"), acceptedRetainedObjectIds: z.array(z.string().min(1).max(100)).max(12) }),
+  z.object({ ...commandBase, type: z.literal("submit_source"), sourceObjectPath: z.string().min(3).max(300), fileName: z.string().min(1).max(180), mimeType: z.literal("image/jpeg"), byteSize: z.number().int().positive().max(5 * 1024 * 1024), pixelWidth: z.number().int().positive().max(2048), pixelHeight: z.number().int().positive().max(2048), dimensions: z.object({ widthM: z.number().min(2).max(40), depthM: z.number().min(2).max(40), heightM: z.number().min(2).max(8) }) }),
+  z.object({ ...commandBase, type: z.literal("confirm_analysis"), analysis: spaceAnalysisSchema.optional(), disclosure: z.string().trim().min(1).max(300), acceptedRetainedObjectIds: z.array(z.string().min(1).max(100)).max(12) }),
   z.object({ ...commandBase, type: z.literal("submit_brief"), answers: z.object({ purpose: z.string().trim().min(3).max(320), feeling: z.string().trim().min(3).max(240), mustKeep: z.string().trim().max(240), improveOrAvoid: z.string().trim().max(320) }) }),
   z.object({ ...commandBase, type: z.literal("generate_options") }),
   z.object({ ...commandBase, type: z.literal("select_option"), optionId: z.string().min(1).max(100) }),
@@ -27,6 +29,23 @@ export const studioCommandSchema = z.discriminatedUnion("type", [
 ]);
 
 export type StudioCommand = z.infer<typeof studioCommandSchema>;
+
+export const pairedCanonicalStateSchema = z.object({
+  stage: z.enum(["space", "brief", "options", "refine", "approve", "ended"]).default("space"),
+  source: z.object({
+    objectPath: z.string().min(3).max(300), fileName: z.string().min(1).max(180), mimeType: z.literal("image/jpeg"),
+    byteSize: z.number().int().positive().max(5 * 1024 * 1024), pixelWidth: z.number().int().positive().max(2048), pixelHeight: z.number().int().positive().max(2048),
+    dimensions: z.object({ widthM: z.number().min(2).max(40), depthM: z.number().min(2).max(40), heightM: z.number().min(2).max(8) }),
+  }).optional(),
+  analysis: spaceAnalysisSchema.optional(),
+  analysisDisclosure: z.string().max(300).optional(),
+  acceptedRetainedObjectIds: z.array(z.string()).max(12).default([]),
+  brief: z.object({ purpose: z.string(), feeling: z.string(), mustKeep: z.string(), improveOrAvoid: z.string() }).optional(),
+  options: z.array(studioOptionSchema).max(3).default([]),
+  selectedOptionId: z.string().optional(),
+});
+
+export type PairedCanonicalState = z.infer<typeof pairedCanonicalStateSchema>;
 
 export const studioEventTypeSchema = z.enum([
   "session_created", "controller_joined", "source_submitted", "source_analyzed",
@@ -82,4 +101,3 @@ export const sessionJoinEnvelopeSchema = z.object({
 });
 
 export type SessionJoinEnvelope = z.infer<typeof sessionJoinEnvelopeSchema>;
-

@@ -21,7 +21,7 @@ test("same-device pairing is disclosed and the wall observes one controller", as
   await expect(phone).not.toHaveURL(/token=/);
 
   await expect(page.getByText("Phone paired", { exact: true })).toBeVisible();
-  await expect(page.getByText("Phone controller authenticated. The wall is ready for room intake.")).toBeVisible();
+  await expect(page.getByText(/Phone controller (authenticated|recovered)/)).toBeVisible();
   await expect(page.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth)).resolves.toBe(true);
   await page.screenshot({ path: testInfo.outputPath("paired-wall.png"), fullPage: true });
   await phone.screenshot({ path: testInfo.outputPath("paired-phone.png"), fullPage: true });
@@ -39,7 +39,45 @@ test("phone controller is readable at Pixel 7 width", async ({ page }, testInfo)
   const joinUrl = storedSession ? (JSON.parse(storedSession) as { joinUrl: string }).joinUrl : null;
   await page.goto(joinUrl!);
   await expect(page.getByText("Paired", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Capture room photo/ })).toHaveCSS("min-height", "72px");
+  await expect(page.locator(".phone-file")).toHaveCSS("min-height", "72px");
   await expect(page.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth)).resolves.toBe(true);
   await page.screenshot({ path: testInfo.outputPath("paired-phone-pixel7.png"), fullPage: true });
+});
+
+test("phone intake generates the same canonical options on the Studio Wall", async ({ page, context }, testInfo) => {
+  test.slow();
+  test.skip(testInfo.project.name !== "chromium", "The paired intake proof runs once with both surfaces in one browser context.");
+  await page.goto("/wall");
+  await page.getByRole("button", { name: "Create Studio Wall" }).click();
+  await expect(page).toHaveURL(/\/wall\/[0-9a-f-]+$/);
+  const stored = await page.evaluate(() => {
+    const id = location.pathname.split("/").at(-1);
+    return sessionStorage.getItem(`interiorin:created:${id}`);
+  });
+  const joinUrl = (JSON.parse(stored!) as { joinUrl: string }).joinUrl;
+  const phone = await context.newPage();
+  await phone.route("**/api/space-analysis", async (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ status: "provider_unavailable", disclosure: "Visual analysis unavailable in this test; entered dimensions remain usable." }) }));
+  await phone.goto(joinUrl);
+  await expect(phone.getByRole("heading", { name: "Show us the room. You keep control of the facts." })).toBeVisible();
+  await phone.locator('input[type="file"]').setInputFiles({
+    name: "room.svg", mimeType: "image/svg+xml",
+    buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="#d8d0c3"/><rect y="520" width="1200" height="280" fill="#a58c68"/><rect x="120" y="180" width="430" height="320" fill="#f5f0e7"/></svg>'),
+  });
+  await expect(phone.getByRole("img", { name: "Normalized room source preview" })).toBeVisible();
+  await phone.getByRole("button", { name: /Continue to brief/ }).click();
+  await expect(phone.getByRole("heading", { name: "Tell us how life should feel here." })).toBeVisible();
+  await expect(phone.getByRole("button", { name: /Push to talk for/ })).toHaveCount(4);
+  await phone.getByRole("textbox", { name: "What should this room support?" }).fill("Family conversation, reading, and a calm evening routine");
+  await phone.getByRole("textbox", { name: "How should it feel?" }).fill("Warm, calm, tactile, and uncluttered");
+  await phone.getByRole("textbox", { name: "What must remain?" }).fill("Keep the existing sofa and clear access to the window");
+  await phone.getByRole("textbox", { name: "What should improve or be avoided?" }).fill("Improve circulation and avoid bulky furniture");
+  await phone.getByRole("button", { name: /Generate three directions/ }).click();
+  await expect(phone.getByRole("heading", { name: "Choose the direction worth refining." })).toBeVisible();
+  await expect(phone.locator(".phone-options button")).toHaveCount(3);
+  await expect(page.locator("#wall-options-title")).toHaveText("Clear Passage");
+  await phone.getByRole("button", { name: /Conversation Island/ }).click();
+  await expect(page.locator("#wall-options-title")).toHaveText("Conversation Island");
+  await expect(page.locator(".wall-canvas canvas")).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("paired-generated-wall.png"), fullPage: true });
+  await phone.screenshot({ path: testInfo.outputPath("paired-generated-phone.png"), fullPage: true });
 });
