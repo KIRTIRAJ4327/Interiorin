@@ -37,7 +37,7 @@ function Table({ position, ghost = false }: { position: Vector3; ghost?: boolean
 
 function Bookcase() {
   return (
-    <group position={[2, 0, 0]}>
+    <group position={[3.2, 0, 0]}>
       <mesh position={[0, 1, 0]} castShadow>
         <boxGeometry args={[1, 2, 0.4]} />
         <meshStandardMaterial color="#674b36" />

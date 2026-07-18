@@ -1,16 +1,16 @@
 import type { SpatialScene } from "./schema";
 
-export type VerifiedDimensions = {
+export type DeclaredDimensions = {
   width: number;
   height: number;
   depth: number;
   sourceLabel: string;
 };
 
-export function recordVerifiedObjectDimensions(
+export function declareObjectDimensionsForSession(
   scene: SpatialScene,
   objectId: string,
-  measurement: VerifiedDimensions,
+  measurement: DeclaredDimensions,
 ): SpatialScene {
   const exists = scene.objects.some((object) => object.id === objectId);
   if (!exists) throw new Error(`Cannot verify unknown object: ${objectId}`);
@@ -28,9 +28,9 @@ export function recordVerifiedObjectDimensions(
               provenance: {
                 evidence: "user_entered",
                 confidence: "high",
-                authority: "verified",
+                authority: "user_declared",
                 sourceLabel: measurement.sourceLabel,
-                note: "Measured value promoted this fact from observed_unverified to verified.",
+                note: "Homeowner measurement promoted this fact from observed_unverified to user_declared for this session.",
               },
             },
           }

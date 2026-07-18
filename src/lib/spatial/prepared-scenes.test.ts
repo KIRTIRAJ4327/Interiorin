@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { recordVerifiedObjectDimensions } from "./fact-authority";
+import { declareObjectDimensionsForSession } from "./fact-authority";
 import { preparedExteriorScene, preparedInteriorScene } from "./prepared-scenes";
 import { evaluateTruthContract } from "./truth-contract";
 
@@ -17,8 +17,9 @@ describe("prepared truth-contract scenes", () => {
       code: "authority.evidence_required",
       factAuthority: "observed_unverified",
     });
+    expect(before.effectiveAction).toBeUndefined();
 
-    const measuredScene = recordVerifiedObjectDimensions(preparedInteriorScene, "bookcase", {
+    const measuredScene = declareObjectDimensionsForSession(preparedInteriorScene, "bookcase", {
       width: 1,
       height: 2,
       depth: 0.4,
@@ -27,6 +28,7 @@ describe("prepared truth-contract scenes", () => {
     const after = evaluateTruthContract(measuredScene, action);
 
     expect(after.decision).toBe("limited");
+    expect(measuredScene.objects.find((object) => object.id === "bookcase")?.dimensions.provenance.authority).toBe("user_declared");
     expect(after.effectiveAction).toMatchObject({
       type: "move_object",
       position: { x: 1.1, y: 0, z: 0 },

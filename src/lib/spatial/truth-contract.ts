@@ -157,19 +157,21 @@ function clearanceAlternative(
   );
   if (!protectedAnchor) return undefined;
 
-  const deltaX = action.position.x - protectedAnchor.transform.position.x;
-  const deltaZ = action.position.z - protectedAnchor.transform.position.z;
-  const distance = Math.hypot(deltaX, deltaZ);
-  if (distance >= clearance.thresholdMeters) return undefined;
+  const movingObject = scene.objects.find((object) => object.id === action.objectId);
+  if (!movingObject) return undefined;
 
-  const fallbackX = distance === 0 ? 1 : deltaX / distance;
-  const fallbackZ = distance === 0 ? 0 : deltaZ / distance;
+  const toMillimeters = (meters: number) => Math.round(meters * 1000);
+  const anchorLeftEdgeMm =
+    toMillimeters(protectedAnchor.transform.position.x) -
+    toMillimeters(protectedAnchor.dimensions.width) / 2;
+  const maximumCenterMm =
+    anchorLeftEdgeMm -
+    toMillimeters(clearance.thresholdMeters) -
+    toMillimeters(movingObject.dimensions.width) / 2;
+  if (toMillimeters(action.position.x) <= maximumCenterMm) return undefined;
+
   const limitedPosition = clampToEnvelope(
-    {
-      x: protectedAnchor.transform.position.x + fallbackX * clearance.thresholdMeters,
-      y: action.position.y,
-      z: protectedAnchor.transform.position.z + fallbackZ * clearance.thresholdMeters,
-    },
+    { x: maximumCenterMm / 1000, y: action.position.y, z: action.position.z },
     scene,
   );
   return {
@@ -267,6 +269,15 @@ export function evaluateTruthContract(
   const authority = authorityCheck(scene, requestedAction, provenance);
   if (authority) checks.push(authority);
 
+  if (authority?.code === "authority.evidence_required") {
+    return {
+      ...base,
+      decision: "confirmation_required",
+      checks,
+      summary: "The proposal remains blocked until the supporting fact is deliberately declared or verified.",
+    };
+  }
+
   let effectiveAction = requestedAction;
   let limited = false;
   if (requestedAction.type === "move_object") {
@@ -290,16 +301,6 @@ export function evaluateTruthContract(
       limited = true;
       checks.push(clearance.check);
     }
-  }
-
-  if (authority?.code === "authority.evidence_required") {
-    return {
-      ...base,
-      decision: "confirmation_required",
-      effectiveAction,
-      checks,
-      summary: "The proposal remains a preview until the inferred fact is confirmed.",
-    };
   }
 
   return {

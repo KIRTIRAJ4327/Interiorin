@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { recordVerifiedObjectDimensions } from "./fact-authority";
+import { declareObjectDimensionsForSession } from "./fact-authority";
 import type { SpatialScene } from "./schema";
 import { evaluateTruthContract } from "./truth-contract";
 
@@ -26,8 +26,8 @@ function room(): SpatialScene {
     calibration: {
       status: "calibrated",
       anchorLabel: "North wall",
-      realLengthMeters: 6,
-      modelLengthMeters: 6,
+      realLengthMeters: 7,
+      modelLengthMeters: 7,
     },
     zones: [
       {
@@ -36,8 +36,8 @@ function room(): SpatialScene {
         kind: "floor",
         polygon: [
           { x: -3, y: 0, z: -2 },
-          { x: 3, y: 0, z: -2 },
-          { x: 3, y: 0, z: 2 },
+          { x: 4, y: 0, z: -2 },
+          { x: 4, y: 0, z: 2 },
           { x: -3, y: 0, z: 2 },
         ],
         materialId: "oak",
@@ -53,7 +53,7 @@ function room(): SpatialScene {
         category: "table",
         assetId: "table",
         transform: {
-          position: { x: 0, y: 0, z: 0 },
+          position: { x: 0.92, y: 0, z: 0 },
           rotation: { x: 0, y: 0, z: 0 },
           scale: { x: 1, y: 1, z: 1 },
         },
@@ -68,7 +68,7 @@ function room(): SpatialScene {
         category: "storage",
         assetId: "bookcase",
         transform: {
-          position: { x: 2, y: 0, z: 0 },
+          position: { x: 3.2, y: 0, z: 0 },
           rotation: { x: 0, y: 0, z: 0 },
           scale: { x: 1, y: 1, z: 1 },
         },
@@ -106,7 +106,7 @@ function room(): SpatialScene {
 
 describe("truth contract", () => {
   it("limits an adversarial move to the maximum valid clearance", () => {
-    const measured = recordVerifiedObjectDimensions(room(), "bookcase", {
+    const measured = declareObjectDimensionsForSession(room(), "bookcase", {
       width: 1,
       height: 2,
       depth: 0.4,
@@ -115,7 +115,7 @@ describe("truth contract", () => {
     const outcome = evaluateTruthContract(measured, {
       type: "move_object",
       objectId: "table",
-      position: { x: 1.8, y: 0, z: 0 },
+      position: { x: 1.32, y: 0, z: 0 },
     });
 
     expect(outcome.decision).toBe("limited");

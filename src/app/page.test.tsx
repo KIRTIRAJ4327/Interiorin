@@ -40,8 +40,11 @@ describe("authority-gated spatial proof", () => {
     expect(screen.getByText("Prepared typed proposal")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /record measurement/i }));
-    expect(screen.getByText("Only authority changed.")).toBeInTheDocument();
-    expect(screen.getByText("Verified")).toBeInTheDocument();
+    expect(await screen.findByText("Only authority changed.")).toBeInTheDocument();
+    expect(screen.queryByText("Observed · unverified")).not.toBeInTheDocument();
+    expect(screen.getAllByText("User declared")).toHaveLength(3);
+    expect(screen.getByText("Only evidence authority changed.")).toBeInTheDocument();
+    expect(screen.getAllByText("MATCH")).toHaveLength(2);
 
     fireEvent.click(screen.getByRole("button", { name: /rerun unchanged proposal/i }));
     expect(screen.getByText("40 cm fails. 18 cm passes.")).toBeInTheDocument();

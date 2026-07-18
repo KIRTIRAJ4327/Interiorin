@@ -8,8 +8,9 @@ import {
   type ProposalEnvelope,
   type ProposalProviderMode,
 } from "@/lib/ai/proposal";
-import { recordVerifiedObjectDimensions } from "@/lib/spatial/fact-authority";
+import { declareObjectDimensionsForSession } from "@/lib/spatial/fact-authority";
 import { clonePreparedScene } from "@/lib/spatial/prepared-scenes";
+import { buildAuthorityProof, type AuthorityProof } from "@/lib/spatial/proof";
 import type { SceneAction, SpatialScene } from "@/lib/spatial/schema";
 import { commitTruthContractOutcome, type SpatialCommitReceipt } from "@/lib/spatial/transaction";
 import { evaluateTruthContract, type TruthContractOutcome } from "@/lib/spatial/truth-contract";
@@ -35,6 +36,7 @@ export function SpatialStudio() {
   const [providerMode, setProviderMode] = useState<ProposalProviderMode>();
   const [providerDisclosure, setProviderDisclosure] = useState("Intent has not been sent to a model.");
   const [isClarifying, setIsClarifying] = useState(false);
+  const [proof, setProof] = useState<AuthorityProof>();
   const bookcase = scene.objects.find((object) => object.id === "bookcase");
   const previewPosition = outcome?.decision === "limited" && outcome.effectiveAction?.type === "move_object"
     ? outcome.effectiveAction.position
@@ -72,13 +74,17 @@ export function SpatialStudio() {
     setIsClarifying(false);
   }
 
-  function recordMeasurement() {
-    setScene(recordVerifiedObjectDimensions(scene, "bookcase", {
+  async function recordMeasurement() {
+    const declaredScene = declareObjectDimensionsForSession(scene, "bookcase", {
       width: 1,
       height: 2,
       depth: 0.4,
       sourceLabel: "Tape measurement entered in session",
-    }));
+    });
+    const nextProof = await buildAuthorityProof(scene, declaredScene, demoAction, demoAction);
+    setProof(nextProof);
+    if (!nextProof.valid) return;
+    setScene(declaredScene);
     setStage("evidence_recorded");
   }
 
@@ -103,6 +109,7 @@ export function SpatialStudio() {
     setProviderMode(undefined);
     setProviderDisclosure("Intent has not been sent to a model.");
     setIsClarifying(false);
+    setProof(undefined);
     setStage("ready");
   }
 
@@ -111,7 +118,7 @@ export function SpatialStudio() {
       <a className="skip-link" href="#decision-panel">Skip to decision panel</a>
       <header className="studio-header">
         <div className="brand-lockup"><span className="wordmark">Interiorin</span><span className="workspace-title">Groundline / Dining room 01</span></div>
-        <div className="scene-status"><span className="status-dot" aria-hidden="true" />Calibrated baseline · 6.0 m north wall</div>
+        <div className="scene-status"><span className="status-dot" aria-hidden="true" />Calibrated baseline · 7.0 m north wall</div>
         <button className="quiet-button" type="button" onClick={reset}><RotateCcw aria-hidden="true" size={16} /> Reset proof</button>
       </header>
 
@@ -161,6 +168,7 @@ export function SpatialStudio() {
             <dl><div><dt>Requested</dt><dd>+40 cm</dd></div><div><dt>Committed</dt><dd>+18 cm</dd></div><div><dt>Decision</dt><dd>{receipt.decision}</dd></div><div><dt>Review queue</dt><dd>{receipt.professionalReviewFlagIds.length} item</dd></div></dl>
             <p className="receipt-id">Receipt {receipt.id.slice(0, 8)}</p>
           </DecisionState> : null}
+          {proof ? <ProofPanel proof={proof} /> : null}
         </aside>
       </div>
     </main>
@@ -181,4 +189,19 @@ function DecisionState({ kicker, title, body, icon, className = "", children }: 
 
 function ActionButton({ onClick, children, disabled = false }: { onClick: () => void | Promise<void>; children: React.ReactNode; disabled?: boolean }) {
   return <button className="primary-button" type="button" onClick={onClick} disabled={disabled}>{children}<ArrowRight aria-hidden="true" size={17} /></button>;
+}
+
+function ProofPanel({ proof }: { proof: AuthorityProof }) {
+  const shortHash = (hash: string) => `${hash.slice(0, 15)}…${hash.slice(-8)}`;
+  return (
+    <section className={`proof-panel ${proof.valid ? "proof-valid" : "proof-invalid"}`} aria-labelledby="proof-title">
+      <p className="state-kicker">A/B CAUSAL PROOF</p>
+      <h3 id="proof-title">{proof.valid ? "Only evidence authority changed." : "Proof invalid — pass B disabled."}</h3>
+      <div className="proof-rows">
+        <div><span>Geometry bytes</span><strong>{proof.geometry.equal ? "MATCH" : "CHANGED"}</strong><code>{shortHash(proof.geometry.before.hash)}</code></div>
+        <div><span>Transaction bytes</span><strong>{proof.transaction.equal ? "MATCH" : "CHANGED"}</strong><code>{shortHash(proof.transaction.before.hash)}</code></div>
+        <div><span>Authority ledger</span><strong>{proof.authority.equal ? "MATCH" : "1 FIELD"}</strong><code>{proof.authority.diff[0] ? `${proof.authority.diff[0].before} → ${proof.authority.diff[0].after}` : "No allowed diff"}</code></div>
+      </div>
+    </section>
+  );
 }

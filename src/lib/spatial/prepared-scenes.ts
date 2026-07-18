@@ -38,8 +38,8 @@ export const preparedInteriorScene: SpatialScene = spatialSceneSchema.parse({
   calibration: {
     status: "calibrated",
     anchorLabel: "North wall",
-    realLengthMeters: 6,
-    modelLengthMeters: 6,
+    realLengthMeters: 7,
+    modelLengthMeters: 7,
   },
   zones: [
     {
@@ -48,8 +48,8 @@ export const preparedInteriorScene: SpatialScene = spatialSceneSchema.parse({
       kind: "floor",
       polygon: [
         { x: -3, y: 0, z: -2.25 },
-        { x: 3, y: 0, z: -2.25 },
-        { x: 3, y: 0, z: 2.25 },
+        { x: 4, y: 0, z: -2.25 },
+        { x: 4, y: 0, z: 2.25 },
         { x: -3, y: 0, z: 2.25 },
       ],
       materialId: "oak-natural",
@@ -62,8 +62,8 @@ export const preparedInteriorScene: SpatialScene = spatialSceneSchema.parse({
       kind: "wall",
       polygon: [
         { x: -3, y: 0, z: -2.25 },
-        { x: 3, y: 0, z: -2.25 },
-        { x: 3, y: 2.7, z: -2.25 },
+        { x: 4, y: 0, z: -2.25 },
+        { x: 4, y: 2.7, z: -2.25 },
         { x: -3, y: 2.7, z: -2.25 },
       ],
       materialId: "plaster-chalk",
@@ -100,7 +100,7 @@ export const preparedInteriorScene: SpatialScene = spatialSceneSchema.parse({
       label: "Heirloom bookcase",
       category: "storage",
       assetId: "bookcase-heirloom",
-      transform: transform(2, 0, 0),
+      transform: transform(3.2, 0, 0),
       dimensions: { width: 1, height: 2, depth: 0.4, provenance: observed },
       materialIds: ["walnut-aged"],
       protected: true,
