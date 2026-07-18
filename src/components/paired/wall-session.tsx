@@ -56,6 +56,7 @@ export function WallSession({ sessionId }: { sessionId: string }) {
 
   const joined = connection === "paired";
   const selectedOption = canonical.options.find((option) => option.id === canonical.selectedOptionId) ?? canonical.options[0];
+  const activeProposal = canonical.proposals.at(-1);
   return (
     <main className="wall-shell" id="main-content">
       <header className="wall-header">
@@ -70,6 +71,7 @@ export function WallSession({ sessionId }: { sessionId: string }) {
           <aside className="wall-options-rail" aria-label="Generated room directions">
             <p className="eyebrow">{wallMode === "explore" ? "Three checked directions" : "Selected direction"}</p>
             {wallMode === "explore" ? canonical.options.map((option, index) => <article key={option.id} data-selected={option.id === selectedOption.id}><span>0{index + 1}</span><div><small>{option.principle}</small><h2>{option.name}</h2><p>{option.rationale}</p></div></article>) : <><h2>{selectedOption.principle}</h2><p>{selectedOption.rationale}</p><dl><div><dt>Envelope</dt><dd>{selectedOption.scene.zones[0]?.polygon[1]?.x.toFixed(1)} m declared width</dd></div><div><dt>Objects</dt><dd>{selectedOption.scene.objects.length} canonical objects</dd></div><div><dt>Authority</dt><dd>Dimensions entered on phone</dd></div></dl></>}
+            {activeProposal ? <section className="wall-live-trace" aria-label="Live Decision Trace" aria-live="polite"><p className="eyebrow">Decision Trace · {activeProposal.id.slice(0, 8)}</p><blockquote>{activeProposal.transcript}</blockquote><ol><li className="is-done"><Check />Request received</li><li className="is-done"><Check />Interpreted · {activeProposal.interpretation.mode.replaceAll("_", " ")}</li><li className="is-done"><Check />Typed schema valid</li><li className={activeProposal.receipt ? "is-done" : ""}>{activeProposal.receipt ? <Check /> : null}Spatially checked</li><li className={activeProposal.status === "awaiting_approval" ? "is-active" : activeProposal.status === "committed" || activeProposal.status === "rejected" ? "is-done" : ""}>{activeProposal.status === "committed" || activeProposal.status === "rejected" ? <Check /> : null}{activeProposal.status.replaceAll("_", " ")}</li></ol>{activeProposal.receipt ? <p data-status={activeProposal.receipt.status}>{activeProposal.receipt.message}</p> : <p>{activeProposal.interpretation.clarification}</p>}<small>{activeProposal.interpretation.disclosure}</small></section> : null}
             <div className="event-ribbon"><span>{events.length} verified events</span><code>{canonical.stage.toUpperCase()}</code></div>
           </aside>
         </div>

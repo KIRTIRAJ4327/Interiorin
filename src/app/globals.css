@@ -124,6 +124,16 @@ body {
 .wall-options-rail dl div { display: grid; grid-template-columns: 90px 1fr; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--rule-soft); }
 .wall-options-rail dt { color: var(--graphite); font-family: var(--font-mono), monospace; font-size: 11px; text-transform: uppercase; }
 .wall-options-rail dd { margin: 0; }
+.wall-live-trace { margin-top: 12px; padding: 14px; border: 1px solid var(--control-boundary); background: var(--canvas); }
+.wall-live-trace blockquote { margin: 10px 0; padding-left: 10px; border-left: 3px solid var(--declared); font-size: 13px; }
+.wall-live-trace ol { margin: 12px 0; padding: 0; list-style: none; }
+.wall-live-trace li { min-height: 28px; display: flex; align-items: center; gap: 7px; color: var(--graphite); font-size: 12px; text-transform: capitalize; }
+.wall-live-trace li svg { width: 15px; color: var(--verified); }
+.wall-live-trace li.is-active { color: var(--declared); font-weight: 600; }
+.wall-live-trace li.is-active::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--declared); }
+.wall-live-trace > p[data-status="accepted"] { color: var(--verified); }
+.wall-live-trace > p[data-status="rejected"] { color: var(--danger); }
+.wall-live-trace > small { display: block; margin-top: 8px; color: var(--graphite); font-size: 10px; }
 
 .phone-shell, .phone-status { min-height: 100dvh; max-width: 560px; margin: 0 auto; background: var(--surface); }
 .phone-shell { padding-bottom: max(24px, env(safe-area-inset-bottom)); border-inline: 1px solid var(--rule-soft); }
@@ -172,6 +182,23 @@ body {
 .phone-swatches i { flex: 1; background: #c7ad82; }
 .phone-swatches i:nth-child(2) { background: #b49a72; }
 .phone-swatches i:nth-child(3) { background: #617052; }
+.phone-refine { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--rule); }
+.phone-refine label { font-weight: 600; }
+.phone-refine textarea { width: 100%; min-height: 92px; display: block; margin-top: 8px; padding: 10px; border: 1px solid var(--control-boundary); background: var(--surface); resize: vertical; }
+.phone-refine > div { display: grid; grid-template-columns: 1fr 1.5fr; gap: 8px; margin-top: 8px; }
+.phone-refine button { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--control-boundary); background: var(--surface); }
+.phone-refine button:last-child { color: var(--inverse); background: var(--charcoal); }
+.phone-proposal { margin-top: 18px; padding: 16px; border: 1px solid var(--control-boundary); border-top: 4px solid var(--declared); background: var(--canvas); }
+.phone-proposal[data-status="committed"] { border-top-color: var(--verified); }
+.phone-proposal[data-status="rejected"] { border-top-color: var(--danger); }
+.phone-proposal h2 { margin: 6px 0 14px; font-family: var(--font-serif), serif; font-size: 25px; font-weight: 500; }
+.phone-proposal > p { display: flex; flex-direction: column; margin: 10px 0; color: var(--graphite); font-size: 13px; }
+.phone-proposal > p strong { color: var(--ink); }
+.phone-proposal > small { display: block; color: var(--inferred); }
+.phone-proposal > div { display: grid; grid-template-columns: 1fr 1.5fr; gap: 8px; margin-top: 14px; }
+.phone-proposal button { min-height: 48px; border: 1px solid var(--control-boundary); background: var(--surface); }
+.phone-proposal button:last-child { color: var(--inverse); background: var(--verified); }
+.proposal-status { display: inline-block; margin-top: 10px; color: var(--verified); font-family: var(--font-mono), monospace; font-size: 12px; text-transform: uppercase; }
 .phase-note { margin-top: 28px; padding: 12px; color: var(--graphite); background: var(--model-ground); border-left: 4px solid var(--inferred); font-size: 13px; }
 .phone-status { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 32px; }
 .phone-status > div { width: 52px; height: 52px; display: grid; place-items: center; margin-bottom: 28px; color: var(--inverse); background: var(--charcoal); }

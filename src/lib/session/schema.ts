@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { spaceAnalysisSchema } from "@/lib/studio/analysis";
 import { studioOptionSchema } from "@/lib/studio/schema";
+import { actionReceiptSchema, sceneActionSchema } from "@/lib/spatial/schema";
 
 export const studioMemberRoleSchema = z.enum(["wall", "controller"]);
 export type StudioMemberRole = z.infer<typeof studioMemberRoleSchema>;
@@ -13,13 +14,22 @@ const commandBase = {
   clientTimestamp: z.string().datetime(),
 };
 
+export const refinementInterpretationSchema = z.object({
+  mode: z.enum(["local_parser", "gpt-5.6-terra", "prepared_fallback"]),
+  action: sceneActionSchema.optional(),
+  summary: z.string().trim().min(1).max(280).optional(),
+  clarification: z.string().trim().min(1).max(280).optional(),
+  model: z.string().max(100).optional(), responseId: z.string().max(180).optional(),
+  disclosure: z.string().trim().min(1).max(300), latencyMs: z.number().int().nonnegative().max(30_000),
+}).refine((value) => Boolean(value.action && value.summary) !== Boolean(value.clarification), { message: "Provide one action proposal or one clarification." });
+
 export const studioCommandSchema = z.discriminatedUnion("type", [
   z.object({ ...commandBase, type: z.literal("submit_source"), sourceObjectPath: z.string().min(3).max(300), fileName: z.string().min(1).max(180), mimeType: z.literal("image/jpeg"), byteSize: z.number().int().positive().max(5 * 1024 * 1024), pixelWidth: z.number().int().positive().max(2048), pixelHeight: z.number().int().positive().max(2048), dimensions: z.object({ widthM: z.number().min(2).max(40), depthM: z.number().min(2).max(40), heightM: z.number().min(2).max(8) }) }),
   z.object({ ...commandBase, type: z.literal("confirm_analysis"), analysis: spaceAnalysisSchema.optional(), disclosure: z.string().trim().min(1).max(300), acceptedRetainedObjectIds: z.array(z.string().min(1).max(100)).max(12) }),
   z.object({ ...commandBase, type: z.literal("submit_brief"), answers: z.object({ purpose: z.string().trim().min(3).max(320), feeling: z.string().trim().min(3).max(240), mustKeep: z.string().trim().max(240), improveOrAvoid: z.string().trim().max(320) }) }),
   z.object({ ...commandBase, type: z.literal("generate_options") }),
   z.object({ ...commandBase, type: z.literal("select_option"), optionId: z.string().min(1).max(100) }),
-  z.object({ ...commandBase, type: z.literal("request_refinement"), transcript: z.string().trim().min(2).max(500) }),
+  z.object({ ...commandBase, type: z.literal("request_refinement"), transcript: z.string().trim().min(2).max(500), interpretation: refinementInterpretationSchema }),
   z.object({ ...commandBase, type: z.literal("confirm_proposal"), proposalId: z.string().min(1).max(120) }),
   z.object({ ...commandBase, type: z.literal("reject_proposal"), proposalId: z.string().min(1).max(120) }),
   z.object({ ...commandBase, type: z.literal("save_version"), name: z.string().trim().min(1).max(40) }),
@@ -29,6 +39,13 @@ export const studioCommandSchema = z.discriminatedUnion("type", [
 ]);
 
 export type StudioCommand = z.infer<typeof studioCommandSchema>;
+
+export const pairedProposalSchema = z.object({
+  id: z.string().min(1), transcript: z.string().min(2).max(500), interpretation: refinementInterpretationSchema,
+  receipt: actionReceiptSchema.optional(), status: z.enum(["clarification", "awaiting_approval", "committed", "rejected"]),
+  beforeAfterDiff: z.record(z.string(), z.unknown()).optional(), createdAt: z.string().datetime(), decidedAt: z.string().datetime().optional(),
+});
+export type PairedProposal = z.infer<typeof pairedProposalSchema>;
 
 export const pairedCanonicalStateSchema = z.object({
   stage: z.enum(["space", "brief", "options", "refine", "approve", "ended"]).default("space"),
@@ -43,6 +60,8 @@ export const pairedCanonicalStateSchema = z.object({
   brief: z.object({ purpose: z.string(), feeling: z.string(), mustKeep: z.string(), improveOrAvoid: z.string() }).optional(),
   options: z.array(studioOptionSchema).max(3).default([]),
   selectedOptionId: z.string().optional(),
+  proposals: z.array(pairedProposalSchema).max(20).default([]),
+  receipts: z.array(pairedProposalSchema).max(20).default([]),
 });
 
 export type PairedCanonicalState = z.infer<typeof pairedCanonicalStateSchema>;

@@ -32,16 +32,13 @@ export async function POST(request: Request, { params }: Context) {
     return NextResponse.json({ error: cause instanceof Error ? cause.message : "Command could not be applied." }, { status: 422 });
   }
   const nextRevision = session.revision + 1;
-  const now = new Date().toISOString();
-  const { data: updated, error: updateError } = await admin.from("studio_sessions")
-    .update({ canonical_state: canonicalState, revision: nextRevision, status: parsed.data.type === "end_session" ? "ended" : "active", updated_at: now })
-    .eq("id", sessionId).eq("revision", session.revision).select("revision").maybeSingle();
-  if (updateError || !updated) return NextResponse.json({ error: "Session changed before this command committed.", recover: true }, { status: 409 });
   const safePayload = { commandType: parsed.data.type, revision: nextRevision };
-  const { data: event, error: eventError } = await admin.from("studio_events").insert({
-    session_id: sessionId, event_type: eventTypeForCommand(parsed.data), actor_user_id: user.id, actor_role: "controller",
-    idempotency_key: parsed.data.idempotencyKey, payload: safePayload,
-  }).select("id,created_at").single();
-  if (eventError) return NextResponse.json({ error: "Canonical state committed but event append needs recovery.", revision: nextRevision }, { status: 500 });
-  return NextResponse.json({ revision: nextRevision, canonicalState, event: { id: Number(event.id), sessionId, eventType: eventTypeForCommand(parsed.data), actorRole: "controller", payload: safePayload, createdAt: event.created_at } });
+  const { data: result, error: commitError } = await admin.rpc("commit_studio_command", {
+    p_session_id: sessionId, p_actor_user_id: user.id, p_expected_revision: session.revision, p_canonical_state: canonicalState,
+    p_event_type: eventTypeForCommand(parsed.data), p_idempotency_key: parsed.data.idempotencyKey, p_payload: safePayload,
+    p_status: parsed.data.type === "end_session" ? "ended" : "active",
+  });
+  if (commitError || !result) return NextResponse.json({ error: "Session changed before this command committed.", recover: true }, { status: 409 });
+  const committed = result as { duplicate: boolean; revision: number; event_id: number; created_at: string };
+  return NextResponse.json({ duplicate: committed.duplicate, revision: committed.revision, canonicalState, event: { id: Number(committed.event_id), sessionId, eventType: eventTypeForCommand(parsed.data), actorRole: "controller", payload: safePayload, createdAt: committed.created_at } });
 }
