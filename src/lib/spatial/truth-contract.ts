@@ -170,6 +170,33 @@ export function evaluateTruthContract(
     verificationQueueCount: professionalReviewFlags.length,
   };
 
+  const unknownPropertyBoundary = scene.constraints.find(
+    (constraint) =>
+      scene.kind === "exterior" &&
+      requestedAction.type === "move_object" &&
+      constraint.type === "property_boundary" &&
+      constraint.severity === "blocking" &&
+      (constraint.relatedIds.length === 0 ||
+        constraint.relatedIds.includes(requestedAction.objectId)),
+  );
+  if (unknownPropertyBoundary) {
+    return {
+      ...base,
+      decision: "refused",
+      checks: [
+        {
+          code: "property_boundary.unknown",
+          status: "fail",
+          message: unknownPropertyBoundary.message,
+          factEvidence: unknownPropertyBoundary.provenance.evidence,
+          factConfidence: unknownPropertyBoundary.provenance.confidence,
+          relatedIds: unknownPropertyBoundary.relatedIds,
+        },
+      ],
+      summary: "The exterior move was refused until the property boundary is entered by an authorized person.",
+    };
+  }
+
   const protectedLabel = targetIsProtected(scene, requestedAction);
   if (protectedLabel) {
     return {
