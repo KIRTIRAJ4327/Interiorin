@@ -33,7 +33,7 @@ describe("proposal provider gate", () => {
   });
 
   it("does not call a live provider until the canary flag is explicitly enabled", async () => {
-    process.env.OPENAI_API_KEY = "test-key-that-must-not-be-used";
+    process.env.OPENAI_API_KEY = "x";
     process.env.ENABLE_LIVE_OPENAI = "false";
 
     const response = await POST(proposalRequest());
