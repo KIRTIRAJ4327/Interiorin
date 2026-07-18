@@ -38,7 +38,7 @@ npm run test:e2e
 npm run build
 ```
 
-The browser suite runs the complete offline proof in desktop Chromium and mobile Chromium. Render evidence is kept under `artifacts/screenshots/`.
+The browser suite builds and starts the production app, then runs the complete offline proof serially in desktop Chromium and mobile Chromium. Assertion screenshots are isolated under Playwright's disposable test output; curated render evidence is kept under `artifacts/screenshots/`.
 
 ## Truth boundaries
 

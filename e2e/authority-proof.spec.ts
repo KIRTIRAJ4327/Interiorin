@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("offline causal proof blocks, authorizes, limits, and commits", async ({ page }) => {
+test("offline causal proof blocks, authorizes, limits, and commits", async ({ page }, testInfo) => {
   await page.goto("/");
 
   await expect(page.getByRole("heading", { name: "Authority ledger" })).toBeVisible();
@@ -16,7 +16,7 @@ test("offline causal proof blocks, authorizes, limits, and commits", async ({ pa
   await page.getByRole("button", { name: /record measurement/i }).click();
   await expect(page.getByText("Only evidence authority changed.")).toBeVisible();
   await expect(page.getByText("MATCH")).toHaveCount(2);
-  await page.screenshot({ path: "artifacts/screenshots/studio-proof.png", fullPage: true });
+  await page.screenshot({ path: testInfo.outputPath("studio-proof.png"), fullPage: true });
 
   await page.getByRole("button", { name: /rerun unchanged proposal/i }).click();
   await expect(page.getByText("40 cm fails. 18 cm passes.")).toBeVisible();

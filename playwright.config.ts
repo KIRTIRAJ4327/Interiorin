@@ -5,6 +5,7 @@ export default defineConfig({
   timeout: 45_000,
   expect: { timeout: 8_000 },
   fullyParallel: false,
+  workers: 1,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
   reporter: "line",
@@ -24,9 +25,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npx next dev -p 3211",
+    command: "npm run build && npx next start -p 3211",
     url: "http://localhost:3211",
     reuseExistingServer: false,
-    timeout: 120_000,
+    timeout: 180_000,
   },
 });
