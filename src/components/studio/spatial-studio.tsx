@@ -130,7 +130,7 @@ export function SpatialStudio() {
     <main className="studio-shell">
       <a className="skip-link" href="#decision-panel">Skip to decision panel</a>
       <header className="studio-header">
-        <div className="brand-lockup"><span className="wordmark">Interiorin</span><span className="workspace-title">Groundline / Dining room 01</span></div>
+        <div className="brand-lockup"><span className="wordmark">Interiorin</span><span className="workspace-title">Authority gate / Dining room 01</span></div>
         <div className="scene-status"><span className="status-dot" aria-hidden="true" />Calibrated baseline · 7.0 m north wall</div>
         <button className="quiet-button" type="button" onClick={reset}><RotateCcw aria-hidden="true" size={16} /> Reset proof</button>
       </header>
@@ -145,6 +145,7 @@ export function SpatialStudio() {
             <Fact icon={<Check aria-hidden="true" size={17} />} title="Bookcase lock" detail="Retain and protect" authority="User declared" state="user_declared" />
           </div>
           <div className="authority-rule"><p>AUTHORITY RULE 01</p><strong>Unverified facts may block. They never authorize fit.</strong></div>
+          <div className="policy-note"><span>DEMO POLICY · V1.0.0 · UNENDORSED</span><p>Early decision support only—not survey, code, structural, or construction certification.</p></div>
         </aside>
 
         <section className="scene-stage" aria-labelledby="scene-title">
@@ -166,7 +167,7 @@ export function SpatialStudio() {
 
           {stage === "ready" ? <DecisionState kicker="READY TO CHECK" title="No scene mutation has been attempted." body="Clarify the request, then run the exact proposal against every supporting fact and constraint."><ActionButton onClick={runCheck} disabled={isClarifying}>{isClarifying ? "Clarifying request…" : "Clarify and check"}</ActionButton></DecisionState> : null}
 
-          {stage === "evidence_required" ? <DecisionState className="warning-state" kicker="CONFIRMATION REQUIRED" title="Geometry is computable. Authority is not." body="The bookcase bounds came from one image. Enter one measurement before Groundline exposes an actionable fit." icon={<CircleAlert aria-hidden="true" size={15} />}>
+          {stage === "evidence_required" ? <DecisionState className="warning-state" kicker="CONFIRMATION REQUIRED" title="Geometry is computable. Authority is not." body="The bookcase bounds came from one image. Enter one measurement before Interiorin exposes an actionable fit." icon={<CircleAlert aria-hidden="true" size={15} />}>
             <div className="measurement-row"><label htmlFor="bookcase-depth">Bookcase depth</label><div><input id="bookcase-depth" value="40" readOnly inputMode="decimal" /><span>cm</span></div></div>
             <ActionButton onClick={recordMeasurement}>Record measurement</ActionButton>
           </DecisionState> : null}

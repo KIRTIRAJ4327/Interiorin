@@ -549,6 +549,26 @@ input:focus-visible {
   line-height: 1.25;
 }
 
+.policy-note {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--linen);
+}
+
+.policy-note span {
+  color: var(--terracotta);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.05em;
+}
+
+.policy-note p {
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
 .scene-stage {
   min-width: 0;
   display: grid;

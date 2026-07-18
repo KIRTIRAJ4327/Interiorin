@@ -179,7 +179,7 @@ function clearanceAlternative(
     check: {
       code: "clearance.maximum_valid",
       status: "warning",
-      message: `The requested move conflicts with ${clearance.message} Groundline limited it to the nearest checked position.`,
+      message: `The requested move conflicts with ${clearance.message} Interiorin limited it to the nearest checked position.`,
       factEvidence: clearance.provenance.evidence,
       factConfidence: clearance.provenance.confidence,
       relatedIds: clearance.relatedIds,
