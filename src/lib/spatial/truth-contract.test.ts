@@ -1,15 +1,18 @@
 import { describe, expect, it } from "vitest";
+import { recordVerifiedObjectDimensions } from "./fact-authority";
 import type { SpatialScene } from "./schema";
 import { evaluateTruthContract } from "./truth-contract";
 
 const observed = {
   evidence: "observed" as const,
   confidence: "high" as const,
+  authority: "observed_unverified" as const,
   sourceLabel: "Visible in supplied room photograph",
 };
 const entered = {
   evidence: "user_entered" as const,
   confidence: "high" as const,
+  authority: "user_declared" as const,
   sourceLabel: "Entered by homeowner",
 };
 
@@ -57,7 +60,7 @@ function room(): SpatialScene {
         dimensions: { width: 1.4, height: 0.75, depth: 0.9, provenance: entered },
         materialIds: ["oak"],
         protected: false,
-        provenance: observed,
+        provenance: entered,
       },
       {
         id: "bookcase",
@@ -103,7 +106,13 @@ function room(): SpatialScene {
 
 describe("truth contract", () => {
   it("limits an adversarial move to the maximum valid clearance", () => {
-    const outcome = evaluateTruthContract(room(), {
+    const measured = recordVerifiedObjectDimensions(room(), "bookcase", {
+      width: 1,
+      height: 2,
+      depth: 0.4,
+      sourceLabel: "Measured in test",
+    });
+    const outcome = evaluateTruthContract(measured, {
       type: "move_object",
       objectId: "table",
       position: { x: 1.8, y: 0, z: 0 },

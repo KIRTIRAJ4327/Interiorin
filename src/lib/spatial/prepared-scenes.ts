@@ -3,18 +3,21 @@ import { spatialSceneSchema, type SpatialScene } from "./schema";
 const entered = {
   evidence: "user_entered" as const,
   confidence: "high" as const,
+  authority: "user_declared" as const,
   sourceLabel: "Entered by homeowner",
 };
 
 const observed = {
   evidence: "observed" as const,
   confidence: "high" as const,
+  authority: "observed_unverified" as const,
   sourceLabel: "Visible in supplied room capture",
 };
 
 const inferred = {
   evidence: "inferred" as const,
   confidence: "low" as const,
+  authority: "inferred" as const,
   sourceLabel: "Inferred from a single exterior photograph",
 };
 
@@ -90,7 +93,7 @@ export const preparedInteriorScene: SpatialScene = spatialSceneSchema.parse({
       dimensions: { width: 1.4, height: 0.75, depth: 0.9, provenance: entered },
       materialIds: ["oak-mid"],
       protected: false,
-      provenance: observed,
+      provenance: entered,
     },
     {
       id: "bookcase",

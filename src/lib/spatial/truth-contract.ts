@@ -1,4 +1,5 @@
 import type {
+  Authority,
   Confidence,
   Provenance,
   SceneAction,
@@ -19,6 +20,7 @@ export type TruthContractCheck = {
   message: string;
   factEvidence?: Provenance["evidence"];
   factConfidence?: Confidence;
+  factAuthority?: Authority;
   relatedIds: string[];
 };
 
@@ -76,19 +78,43 @@ function targetIsProtected(scene: SpatialScene, action: SceneAction): string | u
   return object?.protected ? object.label : undefined;
 }
 
-function confidenceCheck(
+const authorizingStates = new Set<Authority>(["verified", "user_declared"]);
+
+function supportingProvenance(scene: SpatialScene, action: SceneAction): Provenance[] {
+  const target = targetProvenance(scene, action);
+  if (!("objectId" in action)) return target ? [target] : [];
+
+  const constraints = scene.constraints.filter((constraint) =>
+    constraint.relatedIds.includes(action.objectId),
+  );
+  const relatedObjects = scene.objects.filter((object) =>
+    constraints.some((constraint) => constraint.relatedIds.includes(object.id)),
+  );
+
+  return [
+    ...(target ? [target] : []),
+    ...constraints.map((constraint) => constraint.provenance),
+    ...relatedObjects.map((object) => object.dimensions.provenance),
+  ];
+}
+
+function authorityCheck(
   scene: SpatialScene,
   action: SceneAction,
   provenance: Provenance | undefined,
 ): TruthContractCheck | undefined {
   if (!fitSensitiveActions.has(action.type) || !provenance) return undefined;
-  if (provenance.evidence === "inferred" && ["low", "unverified"].includes(provenance.confidence)) {
+  const unauthorized = supportingProvenance(scene, action).find(
+    (source) => !authorizingStates.has(source.authority),
+  );
+  if (unauthorized) {
     return {
-      code: "fact.confirmation_required",
+      code: "authority.evidence_required",
       status: "warning",
-      message: "This fit-sensitive change depends on a low-confidence inferred fact.",
-      factEvidence: provenance.evidence,
-      factConfidence: provenance.confidence,
+      message: "This fit-sensitive change depends on a fact that has not been verified or declared by the user.",
+      factEvidence: unauthorized.evidence,
+      factConfidence: unauthorized.confidence,
+      factAuthority: unauthorized.authority,
       relatedIds: "objectId" in action ? [action.objectId] : [],
     };
   }
@@ -99,6 +125,7 @@ function confidenceCheck(
       message: "Fit remains approximate until one known measurement calibrates the space.",
       factEvidence: provenance.evidence,
       factConfidence: provenance.confidence,
+      factAuthority: provenance.authority,
       relatedIds: [scene.id],
     };
   }
@@ -108,6 +135,7 @@ function confidenceCheck(
     message: "The target fact is sufficiently grounded for this operation.",
     factEvidence: provenance.evidence,
     factConfidence: provenance.confidence,
+    factAuthority: provenance.authority,
     relatedIds: "objectId" in action ? [action.objectId] : [],
   };
 }
@@ -190,6 +218,7 @@ export function evaluateTruthContract(
           message: unknownPropertyBoundary.message,
           factEvidence: unknownPropertyBoundary.provenance.evidence,
           factConfidence: unknownPropertyBoundary.provenance.confidence,
+          factAuthority: unknownPropertyBoundary.provenance.authority,
           relatedIds: unknownPropertyBoundary.relatedIds,
         },
       ],
@@ -209,6 +238,7 @@ export function evaluateTruthContract(
           message: `${protectedLabel} is protected and cannot be changed without explicit unprotection.`,
           factEvidence: "observed",
           factConfidence: "high",
+          factAuthority: "observed_unverified",
           relatedIds: "objectId" in requestedAction ? [requestedAction.objectId] : [],
         },
       ],
@@ -234,8 +264,8 @@ export function evaluateTruthContract(
   }
 
   const checks: TruthContractCheck[] = [];
-  const confidence = confidenceCheck(scene, requestedAction, provenance);
-  if (confidence) checks.push(confidence);
+  const authority = authorityCheck(scene, requestedAction, provenance);
+  if (authority) checks.push(authority);
 
   let effectiveAction = requestedAction;
   let limited = false;
@@ -262,7 +292,7 @@ export function evaluateTruthContract(
     }
   }
 
-  if (confidence?.code === "fact.confirmation_required") {
+  if (authority?.code === "authority.evidence_required") {
     return {
       ...base,
       decision: "confirmation_required",

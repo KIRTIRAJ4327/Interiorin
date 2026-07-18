@@ -5,6 +5,7 @@ import type { SpatialScene } from "./schema";
 const provenance = {
   evidence: "prepared_demo" as const,
   confidence: "high" as const,
+  authority: "verified" as const,
   sourceLabel: "Prepared test scene",
 };
 

@@ -15,6 +15,15 @@ export type EvidenceKind = z.infer<typeof evidenceKindSchema>;
 export const confidenceSchema = z.enum(["high", "medium", "low", "unverified"]);
 export type Confidence = z.infer<typeof confidenceSchema>;
 
+export const authoritySchema = z.enum([
+  "verified",
+  "user_declared",
+  "observed_unverified",
+  "inferred",
+  "generated",
+]);
+export type Authority = z.infer<typeof authoritySchema>;
+
 export const vector3Schema = z.object({
   x: z.number().finite(),
   y: z.number().finite(),
@@ -25,6 +34,7 @@ export type Vector3 = z.infer<typeof vector3Schema>;
 export const provenanceSchema = z.object({
   evidence: evidenceKindSchema,
   confidence: confidenceSchema,
+  authority: authoritySchema,
   sourceLabel: z.string().trim().min(1).max(120),
   note: z.string().trim().max(280).optional(),
 });
