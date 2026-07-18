@@ -62,19 +62,19 @@ function Room({ scene, previewPosition }: SceneCanvasProps) {
       <color attach="background" args={["#e8e0d3"]} />
       <ambientLight intensity={1.1} />
       <directionalLight position={[-2, 6, 4]} intensity={2.2} castShadow />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[6, 4.5]} />
+      <mesh position={[0.5, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[7, 4.5]} />
         <meshStandardMaterial color="#c6aa80" roughness={0.9} />
       </mesh>
-      <mesh position={[0, 1.35, -2.25]} receiveShadow>
-        <boxGeometry args={[6, 2.7, 0.08]} />
+      <mesh position={[0.5, 1.35, -2.25]} receiveShadow>
+        <boxGeometry args={[7, 2.7, 0.08]} />
         <meshStandardMaterial color="#eee9df" roughness={1} />
       </mesh>
       <mesh position={[2.55, 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[0.9, 4.2]} />
         <meshBasicMaterial color="#345b6b" transparent opacity={0.14} />
       </mesh>
-      <Grid position={[0, 0.018, 0]} args={[6, 4.5]} cellColor="#7e7569" sectionColor="#345b6b" cellSize={0.25} sectionSize={1} fadeDistance={12} infiniteGrid={false} />
+      <Grid position={[0.5, 0.018, 0]} args={[7, 4.5]} cellColor="#7e7569" sectionColor="#345b6b" cellSize={0.25} sectionSize={1} fadeDistance={12} infiniteGrid={false} />
       <Table position={tablePosition} />
       {previewPosition && previewPosition.x !== tablePosition.x ? <Table position={previewPosition} ghost /> : null}
       <Bookcase />
@@ -83,7 +83,7 @@ function Room({ scene, previewPosition }: SceneCanvasProps) {
         <meshStandardMaterial color="#f4eee2" emissive="#d8b66e" emissiveIntensity={0.5} />
       </mesh>
       <ContactShadows position={[0, 0.025, 0]} opacity={0.35} scale={8} blur={2.2} far={5} />
-      <OrbitControls makeDefault enablePan={false} minDistance={4.5} maxDistance={9} maxPolarAngle={Math.PI / 2.05} />
+      <OrbitControls makeDefault target={[0.5, 0.65, 0]} enablePan={false} minDistance={4.5} maxDistance={11} maxPolarAngle={Math.PI / 2.05} />
     </>
   );
 }
@@ -92,7 +92,7 @@ export function SceneCanvas(props: SceneCanvasProps) {
   return (
     <div className="scene-canvas" aria-label="Interactive three-dimensional view of the prepared dining room">
       <SceneErrorBoundary>
-        <Canvas shadows camera={{ position: [4.6, 3.8, 5.8], fov: 38 }} dpr={[1, 1.5]} fallback={<CanvasFallback />}>
+        <Canvas shadows camera={{ position: [6.5, 4.4, 7.5], fov: 42 }} dpr={[1, 1.5]} fallback={<CanvasFallback />}>
           <Room {...props} />
         </Canvas>
       </SceneErrorBoundary>

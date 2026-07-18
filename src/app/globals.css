@@ -56,7 +56,7 @@ a:focus-visible {
   transform: translateY(-200%);
 }
 
-.skip-link:focus {
+.skip-link:focus-visible {
   transform: translateY(0);
 }
 
