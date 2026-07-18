@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { declareObjectDimensionsForSession } from "./fact-authority";
+import { declareObjectWidthForSession } from "./fact-authority";
 import { preparedInteriorScene } from "./prepared-scenes";
 import { buildAuthorityProof } from "./proof";
 import { buildBasicReceipt } from "./receipt";
@@ -14,10 +14,8 @@ const action = {
 
 describe("minimal decision receipt", () => {
   it("records provider, policy, five fact bases, review, proof, and one scene diff", async () => {
-    const declared = declareObjectDimensionsForSession(preparedInteriorScene, "bookcase", {
+    const declared = declareObjectWidthForSession(preparedInteriorScene, "bookcase", {
       width: 1,
-      height: 2,
-      depth: 0.4,
       sourceLabel: "Tape measurement in receipt test",
     });
     const proof = await buildAuthorityProof(preparedInteriorScene, declared, action, action);

@@ -1,19 +1,17 @@
 import type { SpatialScene } from "./schema";
 
-export type DeclaredDimensions = {
+export type DeclaredWidth = {
   width: number;
-  height: number;
-  depth: number;
   sourceLabel: string;
 };
 
-export function declareObjectDimensionsForSession(
+export function declareObjectWidthForSession(
   scene: SpatialScene,
   objectId: string,
-  measurement: DeclaredDimensions,
+  measurement: DeclaredWidth,
 ): SpatialScene {
   const exists = scene.objects.some((object) => object.id === objectId);
-  if (!exists) throw new Error(`Cannot verify unknown object: ${objectId}`);
+  if (!exists) throw new Error(`Cannot declare width for unknown object: ${objectId}`);
 
   return {
     ...scene,
@@ -22,15 +20,14 @@ export function declareObjectDimensionsForSession(
         ? {
             ...object,
             dimensions: {
+              ...object.dimensions,
               width: measurement.width,
-              height: measurement.height,
-              depth: measurement.depth,
-              provenance: {
+              widthProvenance: {
                 evidence: "user_entered",
                 confidence: "high",
                 authority: "user_declared",
                 sourceLabel: measurement.sourceLabel,
-                note: "Homeowner measurement promoted this fact from observed_unverified to user_declared for this session.",
+                note: "Homeowner measurement promoted width only from observed_unverified to user_declared for this session.",
               },
             },
           }

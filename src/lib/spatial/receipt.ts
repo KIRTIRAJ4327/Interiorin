@@ -19,7 +19,7 @@ const policyBody = {
     "table.center_x",
     "table.width",
     "bookcase.center_x",
-    "bookcase.dimensions",
+    "bookcase.width_mm",
     "path.minimum_clearance",
   ] as const,
   ruleIds: ["ordered_edge_clearance_v1"] as const,
@@ -49,7 +49,7 @@ export type BasicReceipt = {
   policyRef: typeof policyBody & { hash: `sha256:${string}` };
   factBases: FactBasis[];
   sessionAttestation: {
-    factId: "bookcase.dimensions";
+    factId: "bookcase.width_mm";
     statement: "I measured this value for this session";
     sourceLabel: string;
   };
@@ -85,7 +85,7 @@ function sourceForFact(scene: SpatialScene, factId: string) {
     "table.center_x": table?.provenance.sourceLabel,
     "table.width": table?.dimensions.provenance.sourceLabel,
     "bookcase.center_x": bookcase?.provenance.sourceLabel,
-    "bookcase.dimensions": bookcase?.dimensions.provenance.sourceLabel,
+    "bookcase.width_mm": (bookcase?.dimensions.widthProvenance ?? bookcase?.dimensions.provenance)?.sourceLabel,
     "path.minimum_clearance": path?.provenance.sourceLabel,
   };
   return sources[factId] ?? "Unknown source";
@@ -133,13 +133,15 @@ export async function buildBasicReceipt(
     factBases: facts.map((fact) => ({
       factId: fact.factId,
       authority: fact.authority,
-      basis: fact.factId === "bookcase.dimensions" ? "session_attestation" : "initial_source",
+      basis: fact.factId === "bookcase.width_mm" ? "session_attestation" : "initial_source",
       sourceLabel: sourceForFact(beforeCommitScene, fact.factId),
     })),
     sessionAttestation: {
-      factId: "bookcase.dimensions",
+      factId: "bookcase.width_mm",
       statement: "I measured this value for this session",
-      sourceLabel: bookcase?.dimensions.provenance.sourceLabel ?? "Missing source",
+      sourceLabel:
+        (bookcase?.dimensions.widthProvenance ?? bookcase?.dimensions.provenance)?.sourceLabel ??
+        "Missing source",
     },
     proof: {
       geometryBefore: proof.geometry.before,

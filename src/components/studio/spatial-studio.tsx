@@ -8,7 +8,7 @@ import {
   type ProposalEnvelope,
   type ProposalProviderMode,
 } from "@/lib/ai/proposal";
-import { declareObjectDimensionsForSession } from "@/lib/spatial/fact-authority";
+import { declareObjectWidthForSession } from "@/lib/spatial/fact-authority";
 import { clonePreparedScene } from "@/lib/spatial/prepared-scenes";
 import { buildAuthorityProof, type AuthorityProof } from "@/lib/spatial/proof";
 import type { SceneAction, SpatialScene } from "@/lib/spatial/schema";
@@ -39,10 +39,15 @@ export function SpatialStudio() {
   const [isClarifying, setIsClarifying] = useState(false);
   const [proof, setProof] = useState<AuthorityProof>();
   const [forceOffline, setForceOffline] = useState(false);
+  const [frozenAction, setFrozenAction] = useState<SceneAction>();
   const bookcase = scene.objects.find((object) => object.id === "bookcase");
   const previewPosition = outcome?.decision === "limited" && outcome.effectiveAction?.type === "move_object"
     ? outcome.effectiveAction.position
     : undefined;
+  const requestedCentimeters =
+    frozenAction?.type === "move_object"
+      ? Math.round((frozenAction.position.x - 0.92) * 100)
+      : 40;
 
   async function runCheck() {
     setIsClarifying(true);
@@ -52,6 +57,7 @@ export function SpatialStudio() {
       setProviderMode("prepared_fallback");
       setProviderDisclosure("Presenter selected offline deterministic parser; no model call was attempted.");
       if (prepared.status === "resolved") action = proposalToSceneAction(scene, prepared);
+      setFrozenAction(action);
       const next = evaluateTruthContract(scene, action);
       setOutcome(next);
       setStage(next.decision === "confirmation_required" ? "evidence_required" : "limited");
@@ -81,6 +87,7 @@ export function SpatialStudio() {
       if (prepared.status === "resolved") action = proposalToSceneAction(scene, prepared);
     }
 
+    setFrozenAction(action);
     const next = evaluateTruthContract(scene, action);
     setOutcome(next);
     setStage(next.decision === "confirmation_required" ? "evidence_required" : "limited");
@@ -88,13 +95,17 @@ export function SpatialStudio() {
   }
 
   async function recordMeasurement() {
-    const declaredScene = declareObjectDimensionsForSession(scene, "bookcase", {
+    if (!frozenAction) return;
+    const declaredScene = declareObjectWidthForSession(scene, "bookcase", {
       width: 1,
-      height: 2,
-      depth: 0.4,
       sourceLabel: "Tape measurement entered in session",
     });
-    const nextProof = await buildAuthorityProof(scene, declaredScene, demoAction, demoAction);
+    const nextProof = await buildAuthorityProof(
+      scene,
+      declaredScene,
+      frozenAction,
+      frozenAction,
+    );
     setProof(nextProof);
     if (!nextProof.valid) return;
     setScene(declaredScene);
@@ -102,7 +113,8 @@ export function SpatialStudio() {
   }
 
   function rerunSameCheck() {
-    const next = evaluateTruthContract(scene, demoAction);
+    if (!frozenAction) return;
+    const next = evaluateTruthContract(scene, frozenAction);
     setOutcome(next);
     setStage(next.decision === "limited" ? "limited" : "evidence_required");
   }
@@ -135,6 +147,7 @@ export function SpatialStudio() {
     setIsClarifying(false);
     setProof(undefined);
     setForceOffline(false);
+    setFrozenAction(undefined);
     setStage("ready");
   }
 
@@ -153,7 +166,7 @@ export function SpatialStudio() {
           <p className="rail-intro">Geometry is visible. Authority decides whether it may support a fit claim.</p>
           <div className="fact-list">
             <Fact icon={<Ruler aria-hidden="true" size={17} />} title="90 cm access path" detail="Exact session constraint" authority="User declared" state="user_declared" />
-            <Fact icon={<LockKeyhole aria-hidden="true" size={17} />} title="Heirloom bookcase" detail={`${bookcase?.dimensions.provenance.authority === "user_declared" ? "Homeowner attested" : "Visual estimate"} · 1.00 × 2.00 × 0.40 m`} authority={bookcase ? authorityLabel[bookcase.dimensions.provenance.authority] : "Unknown"} state={bookcase?.dimensions.provenance.authority} />
+            <Fact icon={<LockKeyhole aria-hidden="true" size={17} />} title="Bookcase width" detail={`${(bookcase?.dimensions.widthProvenance ?? bookcase?.dimensions.provenance)?.authority === "user_declared" ? "Homeowner attested" : "Visual estimate"} · 1.00 m`} authority={bookcase ? authorityLabel[(bookcase.dimensions.widthProvenance ?? bookcase.dimensions.provenance).authority] : "Unknown"} state={(bookcase?.dimensions.widthProvenance ?? bookcase?.dimensions.provenance)?.authority} />
             <Fact icon={<Check aria-hidden="true" size={17} />} title="Bookcase lock" detail="Retain and protect" authority="User declared" state="user_declared" />
           </div>
           <div className="authority-rule"><p>AUTHORITY RULE 01</p><strong>Unverified facts may block. They never authorize fit.</strong></div>
@@ -166,33 +179,33 @@ export function SpatialStudio() {
             <div className="legend" aria-label="Scene legend"><span><i className="legend-current" /> Current</span><span><i className="legend-preview" /> Checked alternative</span></div>
           </div>
           <SceneCanvas scene={scene} previewPosition={previewPosition} />
-          <div className="scene-metrics"><span>Requested <strong>+40 cm</strong></span><span>Authorized alternative <strong>{outcome?.decision === "limited" ? "+18 cm" : "—"}</strong></span><span>Committed <strong>{stage === "committed" ? "+18 cm" : "0 cm"}</strong></span></div>
+          <div className="scene-metrics"><span>Requested <strong>+{requestedCentimeters} cm</strong></span><span>Authorized alternative <strong>{outcome?.decision === "limited" ? "+18 cm" : "—"}</strong></span><span>Committed <strong>{stage === "committed" ? "+18 cm" : "0 cm"}</strong></span></div>
         </section>
 
         <aside className="decision-panel" id="decision-panel" aria-labelledby="decision-title">
           <PanelHeading index="02" eyebrow="Pre-commit check" title="Decision trace" id="decision-title" />
           <div className="proposal-card">
             <div className="proposal-source"><Sparkles aria-hidden="true" size={15} />{providerMode === "gpt-5.6" ? "GPT-5.6 typed proposal" : providerMode === "prepared_fallback" ? "Prepared typed proposal" : "Proposal awaiting check"}</div>
-            <p>{demoRequest}</p><code>move(table_01, x: +0.40m)</code><small>{providerDisclosure}</small>
+            <p>{demoRequest}</p><code>move(table_01, x: +{(requestedCentimeters / 100).toFixed(2)}m)</code><small>{providerDisclosure}</small>
             <button className="mode-toggle" type="button" role="switch" aria-checked={forceOffline} onClick={() => setForceOffline((current) => !current)}><span aria-hidden="true" />Offline proof mode {forceOffline ? "on" : "off"}</button>
           </div>
 
           {stage === "ready" ? <DecisionState kicker="READY TO CHECK" title="No scene mutation has been attempted." body="Clarify the request, then run the exact proposal against every supporting fact and constraint."><ActionButton onClick={runCheck} disabled={isClarifying}>{isClarifying ? "Clarifying request…" : "Clarify and check"}</ActionButton></DecisionState> : null}
 
           {stage === "evidence_required" ? <DecisionState className="warning-state" kicker="CONFIRMATION REQUIRED" title="Geometry is computable. Authority is not." body="The bookcase bounds came from one image. Enter one measurement before Interiorin exposes an actionable fit." icon={<CircleAlert aria-hidden="true" size={15} />}>
-            <div className="measurement-row"><label htmlFor="bookcase-depth">Bookcase depth</label><div><input id="bookcase-depth" value="40" readOnly inputMode="decimal" /><span>cm</span></div></div>
+            <div className="measurement-row"><label htmlFor="bookcase-width">Bookcase width</label><div><input id="bookcase-width" value="100" readOnly inputMode="decimal" /><span>cm</span></div></div>
             <ActionButton onClick={recordMeasurement}>Record measurement</ActionButton>
           </DecisionState> : null}
 
           {stage === "evidence_recorded" ? <DecisionState className="verified-state" kicker="EVIDENCE RECORDED" title="Only authority changed." body="The coordinate, constraint, lock, and request are unchanged. Rerun the same check." icon={<Check aria-hidden="true" size={15} />}><ActionButton onClick={rerunSameCheck}>Rerun unchanged proposal</ActionButton></DecisionState> : null}
 
-          {stage === "limited" ? <DecisionState className="limited-state" kicker="LIMITED · CHECKED ALTERNATIVE" title="40 cm fails. 18 cm passes." body="The terracotta ghost shows the nearest position that preserves the entered path and protected bound.">
+          {stage === "limited" ? <DecisionState className="limited-state" kicker="LIMITED · CHECKED ALTERNATIVE" title={`${requestedCentimeters} cm fails. 18 cm passes.`} body="The terracotta ghost shows the nearest position that preserves the entered path and protected bound.">
             <ul className="check-list"><li><Check aria-hidden="true" size={14} />90 cm path retained</li><li><Check aria-hidden="true" size={14} />Bookcase untouched</li><li><CircleAlert aria-hidden="true" size={14} />Professional review attached</li></ul>
             <ActionButton onClick={acceptAlternative}>Accept 18 cm alternative</ActionButton>
           </DecisionState> : null}
 
           {stage === "committed" && receipt ? <DecisionState className="receipt-state" kicker="COMMITTED WITH RECEIPT" title="The checked alternative is now canonical." body="Requested and committed actions remain distinct in the record." icon={<Check aria-hidden="true" size={15} />}>
-            <dl><div><dt>Requested</dt><dd>+40 cm</dd></div><div><dt>Committed</dt><dd>+18 cm</dd></div><div><dt>Fact bases</dt><dd>{receipt.factBases.length} / 5</dd></div><div><dt>Review</dt><dd>{receipt.professionalReview.required ? receipt.professionalReview.status : "not required"}</dd></div><div><dt>Provider</dt><dd>{receipt.provider.mode === "gpt-5.6" ? "live Terra" : "offline"}</dd></div><div><dt>Policy</dt><dd>{receipt.policyRef.version}</dd></div></dl>
+            <dl><div><dt>Requested</dt><dd>+{requestedCentimeters} cm</dd></div><div><dt>Committed</dt><dd>+18 cm</dd></div><div><dt>Fact bases</dt><dd>{receipt.factBases.length} / 5</dd></div><div><dt>Review</dt><dd>{receipt.professionalReview.required ? receipt.professionalReview.status : "not required"}</dd></div><div><dt>Provider</dt><dd>{receipt.provider.mode === "gpt-5.6" ? "live Terra" : "offline"}</dd></div><div><dt>Policy</dt><dd>{receipt.policyRef.version}</dd></div></dl>
             <p className="receipt-id">Receipt {receipt.id.slice(0, 8)}</p>
           </DecisionState> : null}
           {proof ? <ProofPanel proof={proof} /> : null}

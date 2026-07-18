@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { declareObjectDimensionsForSession } from "./fact-authority";
+import { declareObjectWidthForSession } from "./fact-authority";
 import type { SpatialScene } from "./schema";
 import { evaluateTruthContract } from "./truth-contract";
 
@@ -106,10 +106,8 @@ function room(): SpatialScene {
 
 describe("truth contract", () => {
   it("limits an adversarial move to the maximum valid clearance", () => {
-    const measured = declareObjectDimensionsForSession(room(), "bookcase", {
+    const measured = declareObjectWidthForSession(room(), "bookcase", {
       width: 1,
-      height: 2,
-      depth: 0.4,
       sourceLabel: "Measured in test",
     });
     const outcome = evaluateTruthContract(measured, {

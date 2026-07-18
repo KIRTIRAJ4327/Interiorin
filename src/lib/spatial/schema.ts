@@ -45,6 +45,7 @@ export const dimensionsSchema = z.object({
   height: z.number().positive(),
   depth: z.number().positive(),
   provenance: provenanceSchema,
+  widthProvenance: provenanceSchema.optional(),
 });
 
 export const transformSchema = z.object({

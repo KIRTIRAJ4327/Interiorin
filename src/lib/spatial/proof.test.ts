@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { declareObjectDimensionsForSession } from "./fact-authority";
+import { declareObjectWidthForSession } from "./fact-authority";
 import { preparedInteriorScene } from "./prepared-scenes";
-import { buildAuthorityProof } from "./proof";
+import { authorityProjection, buildAuthorityProof } from "./proof";
 
 const action = {
   type: "move_object" as const,
@@ -10,11 +10,19 @@ const action = {
 };
 
 describe("A/B authority proof", () => {
+  it("enumerates exactly the five numeric facts consumed by the solver", () => {
+    expect(authorityProjection(preparedInteriorScene).map((fact) => fact.factId)).toEqual([
+      "table.center_x",
+      "table.width",
+      "bookcase.center_x",
+      "bookcase.width_mm",
+      "path.minimum_clearance",
+    ]);
+  });
+
   it("proves geometry and transaction equality with one authority-only diff", async () => {
-    const passB = declareObjectDimensionsForSession(preparedInteriorScene, "bookcase", {
+    const passB = declareObjectWidthForSession(preparedInteriorScene, "bookcase", {
       width: 1,
-      height: 2,
-      depth: 0.4,
       sourceLabel: "Tape measurement in proof test",
     });
     const proof = await buildAuthorityProof(preparedInteriorScene, passB, action, action);
@@ -25,7 +33,7 @@ describe("A/B authority proof", () => {
     expect(proof.authority.equal).toBe(false);
     expect(proof.authority.diff).toEqual([
       {
-        factId: "bookcase.dimensions",
+        factId: "bookcase.width_mm",
         field: "authority",
         before: "observed_unverified",
         after: "user_declared",
@@ -34,11 +42,9 @@ describe("A/B authority proof", () => {
     expect(proof.geometry.before.hash).toMatch(/^sha256:[0-9a-f]{64}$/);
   });
 
-  it("fails closed when a measurement changes geometry", async () => {
-    const corrected = declareObjectDimensionsForSession(preparedInteriorScene, "bookcase", {
-      width: 1.1,
-      height: 2,
-      depth: 0.4,
+  it.each([0.999, 1.001, 1.1])("fails closed when width changes to %s m", async (width) => {
+    const corrected = declareObjectWidthForSession(preparedInteriorScene, "bookcase", {
+      width,
       sourceLabel: "Different measurement in proof test",
     });
     const proof = await buildAuthorityProof(preparedInteriorScene, corrected, action, action);
@@ -46,5 +52,17 @@ describe("A/B authority proof", () => {
     expect(proof.valid).toBe(false);
     expect(proof.geometry.equal).toBe(false);
     expect(proof.failureReason).toMatch(/proof invalid/i);
+  });
+
+  it("fails closed when pass B receives a different transaction", async () => {
+    const passB = declareObjectWidthForSession(preparedInteriorScene, "bookcase", {
+      width: 1,
+      sourceLabel: "Tape measurement in proof test",
+    });
+    const differentAction = { ...action, position: { x: 1.31, y: 0, z: 0 } };
+    const proof = await buildAuthorityProof(preparedInteriorScene, passB, action, differentAction);
+
+    expect(proof.valid).toBe(false);
+    expect(proof.transaction.equal).toBe(false);
   });
 });

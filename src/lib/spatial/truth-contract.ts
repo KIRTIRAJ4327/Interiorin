@@ -94,7 +94,9 @@ function supportingProvenance(scene: SpatialScene, action: SceneAction): Provena
   return [
     ...(target ? [target] : []),
     ...constraints.map((constraint) => constraint.provenance),
-    ...relatedObjects.map((object) => object.dimensions.provenance),
+    ...relatedObjects.map(
+      (object) => object.dimensions.widthProvenance ?? object.dimensions.provenance,
+    ),
   ];
 }
 

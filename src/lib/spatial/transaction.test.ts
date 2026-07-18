@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { declareObjectDimensionsForSession } from "./fact-authority";
+import { declareObjectWidthForSession } from "./fact-authority";
 import { preparedInteriorScene } from "./prepared-scenes";
 import { commitTruthContractOutcome } from "./transaction";
 import { evaluateTruthContract } from "./truth-contract";
@@ -21,10 +21,8 @@ describe("truth-contract commit", () => {
   });
 
   it("commits only the checked limited alternative and records both actions", () => {
-    const scene = declareObjectDimensionsForSession(preparedInteriorScene, "bookcase", {
+    const scene = declareObjectWidthForSession(preparedInteriorScene, "bookcase", {
       width: 1,
-      height: 2,
-      depth: 0.4,
       sourceLabel: "Measured in transaction test",
     });
     const outcome = evaluateTruthContract(scene, move);

@@ -137,7 +137,7 @@ export function authorityProjection(scene: SpatialScene) {
     { id: "table.center_x", factId: "table.center_x", authority: table.provenance.authority },
     { id: "table.width", factId: "table.width", authority: table.dimensions.provenance.authority },
     { id: "bookcase.center_x", factId: "bookcase.center_x", authority: bookcase.provenance.authority },
-    { id: "bookcase.dimensions", factId: "bookcase.dimensions", authority: bookcase.dimensions.provenance.authority },
+    { id: "bookcase.width_mm", factId: "bookcase.width_mm", authority: (bookcase.dimensions.widthProvenance ?? bookcase.dimensions.provenance).authority },
     { id: "path.minimum_clearance", factId: "path.minimum_clearance", authority: path.provenance.authority },
   ];
 }
@@ -178,7 +178,7 @@ export async function buildAuthorityProof(
   const transactionEqual = transactionBefore.hash === transactionAfter.hash;
   const allowedAuthorityDiff =
     diff.length === 1 &&
-    diff[0]?.factId === "bookcase.dimensions" &&
+    diff[0]?.factId === "bookcase.width_mm" &&
     diff[0].before === "observed_unverified" &&
     diff[0].after === "user_declared";
   const valid = geometryEqual && transactionEqual && allowedAuthorityDiff;
