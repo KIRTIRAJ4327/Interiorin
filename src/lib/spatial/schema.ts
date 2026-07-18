@@ -116,6 +116,7 @@ export const constraintSchema = z.object({
   severity: z.enum(["info", "review", "blocking"]),
   message: z.string().trim().min(1).max(280),
   relatedIds: z.array(z.string()).default([]),
+  thresholdMeters: z.number().positive().optional(),
   requiresProfessionalReview: z.boolean().default(false),
   provenance: provenanceSchema,
 });
