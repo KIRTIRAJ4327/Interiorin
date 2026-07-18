@@ -21,10 +21,14 @@ import {
   Sparkles,
   Square,
   Trees,
+  WandSparkles,
 } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState, useTransition, type FormEvent } from "react";
 import { compareScenes } from "@/lib/spatial/diff";
 import type { SpatialScene } from "@/lib/spatial/schema";
+import { spaceAnalysisEnvelopeSchema, type SpaceAnalysisEnvelope } from "@/lib/studio/analysis";
+import { conceptRenderEnvelopeSchema, type ConceptRenderEnvelope } from "@/lib/studio/presentation";
 import { generateStudioOptions } from "@/lib/studio/generator";
 import { applyStudioRefinement, parseStudioRefinement, type ParsedRefinement } from "@/lib/studio/refinement";
 import { studioProjectSchema, studioVersionSchema, type StudioOption, type StudioProject, type StudioVersion } from "@/lib/studio/schema";
@@ -66,6 +70,11 @@ const defaultForm = {
 export function InteriorinStudio() {
   const [form, setForm] = useState(defaultForm);
   const [sourceFile, setSourceFile] = useState<File>();
+  const [sourcePreviewUrl, setSourcePreviewUrl] = useState("");
+  const [analysisEnvelope, setAnalysisEnvelope] = useState<SpaceAnalysisEnvelope>();
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [conceptRender, setConceptRender] = useState<ConceptRenderEnvelope>();
+  const [isGeneratingConcept, setIsGeneratingConcept] = useState(false);
   const [formError, setFormError] = useState("");
   const [project, setProject] = useState<StudioProject>();
   const [options, setOptions] = useState<StudioOption[]>([]);
@@ -83,6 +92,7 @@ export function InteriorinStudio() {
   const [openQuestions, setOpenQuestions] = useState("Confirm openings, services, exact retained-object dimensions, and all site conditions before procurement or construction.");
   const [isPending, startTransition] = useTransition();
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const sourcePreviewRef = useRef("");
   const optionHeadingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -95,6 +105,10 @@ export function InteriorinStudio() {
     return () => cancelAnimationFrame(frame);
   }, []);
 
+  useEffect(() => () => {
+    if (sourcePreviewRef.current) URL.revokeObjectURL(sourcePreviewRef.current);
+  }, []);
+
   const selectedOption = options.find((option) => option.id === selectedOptionId);
   const projectVersions = versions.filter((version) => version.projectId === project?.id);
   const comparison = useMemo(() => {
@@ -104,13 +118,45 @@ export function InteriorinStudio() {
     return { first, second, diff: compareScenes(first.scene, second.scene) };
   }, [firstCompareId, secondCompareId, versions]);
 
-  function generate(event: FormEvent<HTMLFormElement>) {
+  function chooseSource(file?: File) {
+    if (sourcePreviewRef.current) URL.revokeObjectURL(sourcePreviewRef.current);
+    const preview = file?.type.startsWith("image/") ? URL.createObjectURL(file) : "";
+    sourcePreviewRef.current = preview;
+    setSourcePreviewUrl(preview);
+    setSourceFile(file);
+    setAnalysisEnvelope(undefined);
+  }
+
+  async function generate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError("");
-    if (sourceFile && sourceFile.size > (sourceFile.type === "application/pdf" ? 50 : 20) * 1024 * 1024) {
-      setFormError(sourceFile.type === "application/pdf" ? "PDF sources must be 50 MB or smaller." : "Image sources must be 20 MB or smaller.");
+    if (sourceFile && sourceFile.size > 15 * 1024 * 1024) {
+      setFormError("Visual sources must be 15 MB or smaller.");
       return;
     }
+    let sourceAnalysis: SpaceAnalysisEnvelope | undefined;
+    if (sourceFile) {
+      setIsAnalyzing(true);
+      const body = new FormData();
+      body.set("source", sourceFile);
+      body.set("kind", form.kind);
+      body.set("condition", form.condition);
+      body.set("intent", form.intent);
+      try {
+        const response = await fetch("/api/space-analysis", { method: "POST", body });
+        const parsedEnvelope = spaceAnalysisEnvelopeSchema.safeParse(await response.json().catch(() => null));
+        sourceAnalysis = parsedEnvelope.success ? parsedEnvelope.data : {
+          status: "analysis_failed",
+          disclosure: "The source-analysis response was malformed. Entered dimensions remain usable.",
+        };
+      } catch {
+        sourceAnalysis = { status: "analysis_failed", disclosure: "Visual analysis could not be reached. Entered dimensions remain usable." };
+      } finally {
+        setIsAnalyzing(false);
+      }
+      setAnalysisEnvelope(sourceAnalysis);
+    }
+
     const now = new Date().toISOString();
     const parsed = studioProjectSchema.safeParse({
       id: `project-${crypto.randomUUID()}`,
@@ -124,6 +170,10 @@ export function InteriorinStudio() {
         fileName: sourceFile?.name,
         fileSize: sourceFile?.size,
         authority: "user_declared",
+        analysis: sourceAnalysis?.status === "analyzed" ? sourceAnalysis.analysis : undefined,
+        analysisDisclosure: sourceAnalysis?.disclosure,
+        analysisModel: sourceAnalysis?.model,
+        analysisRequestId: sourceAnalysis?.requestId,
       },
       createdAt: now,
     });
@@ -141,6 +191,7 @@ export function InteriorinStudio() {
       setScene(structuredClone(firstOption.scene));
       setReceipts([]);
       setParsedRefinement(undefined);
+      setConceptRender(undefined);
       requestAnimationFrame(() => optionHeadingRef.current?.focus());
     });
   }
@@ -150,6 +201,7 @@ export function InteriorinStudio() {
     setScene(structuredClone(option.scene));
     setParsedRefinement(undefined);
     setReceipts([]);
+    setConceptRender(undefined);
   }
 
   function prepareRefinement() {
@@ -170,6 +222,33 @@ export function InteriorinStudio() {
     setScene(result.scene);
     setReceipts((current) => [nextReceipt, ...current]);
     setParsedRefinement(undefined);
+    setConceptRender(undefined);
+  }
+
+  async function generateConcept() {
+    if (!sourceFile?.type.startsWith("image/") || !project || !selectedOption || !scene) return;
+    setIsGeneratingConcept(true);
+    const body = new FormData();
+    body.set("source", sourceFile);
+    body.set("brief", JSON.stringify({
+      project: { name: project.name, kind: project.kind, intent: project.intent, enteredDimensionsM: project.dimensions },
+      option: { name: selectedOption.name, principle: selectedOption.principle, rationale: selectedOption.rationale, tradeoffs: selectedOption.tradeoffs },
+      visibleSourceAnalysis: project.source.analysis,
+      canonicalScene: {
+        openings: scene.openings.map((opening) => ({ label: opening.label, kind: opening.kind, protected: opening.protected })),
+        objects: scene.objects.map((object) => ({ label: object.label, category: object.category, positionM: object.transform.position, dimensionsM: object.dimensions, materials: object.materialIds, protected: object.protected })),
+        surfaces: scene.zones.map((zone) => ({ label: zone.label, material: zone.materialId, protected: zone.protected })),
+      },
+    }));
+    try {
+      const response = await fetch("/api/concept-render", { method: "POST", body });
+      const parsed = conceptRenderEnvelopeSchema.safeParse(await response.json().catch(() => null));
+      setConceptRender(parsed.success ? parsed.data : { status: "generation_failed", disclosure: "The concept-render response was malformed. No canonical state changed." });
+    } catch {
+      setConceptRender({ status: "generation_failed", disclosure: "The concept-render service could not be reached. No canonical state changed." });
+    } finally {
+      setIsGeneratingConcept(false);
+    }
   }
 
   function startVoice() {
@@ -229,6 +308,8 @@ export function InteriorinStudio() {
     setReceipts([]);
     setParsedRefinement(undefined);
     setFormError("");
+    setAnalysisEnvelope(undefined);
+    setConceptRender(undefined);
   }
 
   function downloadHandoff() {
@@ -245,6 +326,13 @@ export function InteriorinStudio() {
         "This package is not survey, code, structural, drainage, utility, procurement, or construction certification.",
         "Generated options and 3D views support early decisions; professionals retain responsibility for their scope.",
       ],
+      presentationConcept: conceptRender?.status === "generated" ? {
+        model: conceptRender.model,
+        requestId: conceptRender.requestId,
+        createdAt: conceptRender.createdAt,
+        disclosure: conceptRender.disclosure,
+        imageIncluded: false,
+      } : undefined,
     };
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
     const link = document.createElement("a");
@@ -311,11 +399,15 @@ export function InteriorinStudio() {
           <fieldset>
             <legend>Intent and source</legend>
             <label>What should this space support?<textarea value={form.intent} onChange={(event) => setForm({ ...form, intent: event.target.value })} rows={3} required /></label>
-            <label className="file-field"><FileText aria-hidden="true" size={19} /><span>Optional photo or plan reference<small>Images ≤20 MB · PDF ≤50 MB · local metadata only in this preview</small></span><input type="file" accept="image/*,.pdf,application/pdf" onChange={(event) => setSourceFile(event.target.files?.[0])} /></label>
-            {sourceFile ? <p className="source-selected"><Check aria-hidden="true" size={16} />{sourceFile.name} · {(sourceFile.size / 1024 / 1024).toFixed(1)} MB · observed reference, not measurement truth</p> : null}
+            <label className="file-field"><FileText aria-hidden="true" size={19} /><span>Optional photo or plan reference<small>Images or PDF ≤15 MB · analyzed when Gemini is configured</small></span><input type="file" accept="image/*,.pdf,application/pdf" onChange={(event) => chooseSource(event.target.files?.[0])} /></label>
+            {sourceFile ? <div className="source-selected">
+              {sourcePreviewUrl ? <Image src={sourcePreviewUrl} alt="Selected space reference preview" width={240} height={150} unoptimized /> : <FileText aria-hidden="true" size={24} />}
+              <p><Check aria-hidden="true" size={16} /><span><strong>{sourceFile.name}</strong>{(sourceFile.size / 1024 / 1024).toFixed(1)} MB · visual observations never become metric truth</span></p>
+            </div> : null}
+            {analysisEnvelope ? <AnalysisLedger envelope={analysisEnvelope} /> : sourceFile ? <p className="inline-note" role="status">The source will be analyzed before options are built. If the provider is unavailable, entered dimensions still generate the project.</p> : null}
           </fieldset>
           {formError ? <p className="form-error" role="alert"><CircleAlert aria-hidden="true" size={17} />{formError}</p> : null}
-          <button className="product-primary" type="submit" disabled={isPending}>{isPending ? "Building spatial options…" : "Generate three spatial directions"}<ArrowRight aria-hidden="true" size={18} /></button>
+          <button className="product-primary" type="submit" disabled={isPending || isAnalyzing}>{isAnalyzing ? "Reading visible space cues…" : isPending ? "Building spatial options…" : "Generate three spatial directions"}<ArrowRight aria-hidden="true" size={18} /></button>
         </form>
       </section>
 
@@ -342,6 +434,14 @@ export function InteriorinStudio() {
             <div className="model-column">
               <div className="model-heading"><div><p className="product-eyebrow">03 · canonical workbench</p><h2 id="workbench-title">{selectedOption.name}</h2></div><span>{project.kind} · {project.dimensions.widthM.toFixed(1)} × {project.dimensions.depthM.toFixed(1)} m</span></div>
               <StudioModel scene={scene} />
+              {sourceFile?.type.startsWith("image/") ? <section className="concept-studio" aria-labelledby="concept-title">
+                <div><p className="product-eyebrow">Presentation derivative</p><h3 id="concept-title">See this direction in the photographed space.</h3><p>Nano Banana can edit the source into a visual hypothesis. The canonical 3D scene and evidence ledger remain the decision record.</p></div>
+                {conceptRender?.status === "generated" && conceptRender.imageDataUrl ? <figure>
+                  <Image src={conceptRender.imageDataUrl} alt={`AI-generated in-space concept for ${selectedOption.name}`} width={1200} height={800} unoptimized />
+                  <figcaption><strong>AI presentation concept · not measured</strong>{conceptRender.disclosure}</figcaption>
+                </figure> : conceptRender ? <p className="concept-status" role="status"><CircleAlert aria-hidden="true" size={17} />{conceptRender.disclosure}</p> : null}
+                <button type="button" className="product-secondary" onClick={generateConcept} disabled={isGeneratingConcept}>{isGeneratingConcept ? "Rendering in-space concept…" : <><WandSparkles aria-hidden="true" size={18} />{conceptRender?.status === "generated" ? "Regenerate presentation concept" : "Generate in-space concept"}</>}</button>
+              </section> : null}
             </div>
             <aside className="reason-rail" aria-label="Option reasoning and refinement">
               <section>
@@ -355,6 +455,7 @@ export function InteriorinStudio() {
                 <dl className="source-ledger">
                   <div><dt>Envelope</dt><dd>User-declared · {project.dimensions.widthM.toFixed(1)} × {project.dimensions.depthM.toFixed(1)} m</dd></div>
                   <div><dt>Objects</dt><dd>Observed/inferred · review before purchase</dd></div>
+                  {project.source.analysis ? <div><dt>Visual read</dt><dd>{project.source.analysis.retainedObjects.length} retained object{project.source.analysis.retainedObjects.length === 1 ? "" : "s"} · {project.source.analysis.openings.length} opening{project.source.analysis.openings.length === 1 ? "" : "s"} · {project.source.analysis.confidence} confidence</dd></div> : null}
                   <div><dt>Option</dt><dd>Generated arrangement · deterministic preview</dd></div>
                   <div><dt>Review</dt><dd>{project.kind === "exterior" ? "Survey, setbacks, utilities, grade and drainage required" : "Openings and exact retained-object dimensions required"}</dd></div>
                 </dl>
@@ -428,6 +529,29 @@ export function InteriorinStudio() {
         </>
       ) : null}
     </main>
+  );
+}
+
+function AnalysisLedger({ envelope }: { envelope: SpaceAnalysisEnvelope }) {
+  if (envelope.status !== "analyzed" || !envelope.analysis) {
+    return <div className="analysis-ledger" data-status={envelope.status} role="status"><CircleAlert aria-hidden="true" size={17} /><p><strong>Visual analysis not applied</strong>{envelope.disclosure}</p></div>;
+  }
+  const analysis = envelope.analysis;
+  return (
+    <div className="analysis-ledger" data-status="analyzed" role="status">
+      <Check aria-hidden="true" size={17} />
+      <div>
+        <p><strong>Visible-space read · {analysis.confidence} confidence</strong>{analysis.summary}</p>
+        <dl>
+          <div><dt>Space</dt><dd>{analysis.spaceType} · {analysis.spaceKind}</dd></div>
+          <div><dt>Openings</dt><dd>{analysis.openings.length ? analysis.openings.map((opening) => opening.label).join(", ") : "None confidently visible"}</dd></div>
+          <div><dt>Retained</dt><dd>{analysis.retainedObjects.length ? analysis.retainedObjects.map((object) => object.label).join(", ") : "None confidently visible"}</dd></div>
+          <div><dt>Style cues</dt><dd>{analysis.styleCues.length ? analysis.styleCues.map((cue) => cue.label).join(", ") : "No reliable cue"}</dd></div>
+          <div><dt>Natural light</dt><dd>{analysis.naturalLight.level} · {analysis.naturalLight.note}</dd></div>
+        </dl>
+        <small>{analysis.metricWarning} {envelope.disclosure}</small>
+      </div>
+    </div>
   );
 }
 

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./studio-model", () => ({
@@ -21,12 +21,12 @@ describe("full Interiorin studio journey", () => {
     vi.unstubAllGlobals();
   });
 
-  it("generates options, refines the canonical scene, and saves a factual version", () => {
+  it("generates options, refines the canonical scene, and saves a factual version", async () => {
     render(<InteriorinStudio />);
     expect(screen.getByRole("heading", { name: "Start with the space you have." })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /generate three spatial directions/i }));
 
-    expect(screen.getByRole("heading", { name: "Three ways this space can work." })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Three ways this space can work." })).toBeInTheDocument();
     expect(screen.getAllByRole("radio")).toHaveLength(3);
     expect(screen.getByRole("radio", { name: /clear passage/i })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByTestId("studio-model")).toHaveTextContent("Clear Passage");
@@ -42,13 +42,58 @@ describe("full Interiorin studio journey", () => {
     expect(localStorage.getItem("interiorin.studio.versions.v1")).toContain("First direction");
   });
 
-  it("builds exterior options with an explicit professional boundary", () => {
+  it("builds exterior options with an explicit professional boundary", async () => {
     render(<InteriorinStudio />);
     fireEvent.click(screen.getByRole("button", { name: "Exterior" }));
     fireEvent.click(screen.getByRole("button", { name: /generate three spatial directions/i }));
 
-    expect(screen.getAllByRole("radio")).toHaveLength(3);
+    expect(await screen.findAllByRole("radio")).toHaveLength(3);
     expect(screen.getByRole("radio", { name: /sheltered court/i })).toBeInTheDocument();
     expect(screen.getByText(/Survey, setbacks, utilities, grade and drainage required/i)).toBeInTheDocument();
+  });
+
+  it("analyzes an uploaded space and carries visible observations into the workbench", async () => {
+    vi.stubGlobal("URL", class MockURL extends URL {
+      static createObjectURL = vi.fn(() => "blob:room");
+      static revokeObjectURL = vi.fn();
+    });
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => new Response(JSON.stringify(String(input).includes("concept-render") ? {
+      status: "generated",
+      disclosure: "Presentation hypothesis only.",
+      imageDataUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+      model: "nano-banana-test",
+      createdAt: "2026-07-18T12:00:00.000Z",
+    } : {
+      status: "analyzed",
+      disclosure: "Visible cues only; dimensions remain entered.",
+      model: "gemini-test",
+      analysis: {
+        spaceKind: "interior",
+        spaceType: "living room",
+        summary: "A bright room with a rear window and fixed bench.",
+        confidence: "medium",
+        openings: [{ kind: "window", label: "Rear window", position: "center", confidence: "high" }],
+        retainedObjects: [{ label: "Fixed bench", category: "seating", position: "left", confidence: "high", likelyMovable: false }],
+        styleCues: [{ label: "warm timber", confidence: "medium" }],
+        naturalLight: { level: "high", note: "Strong daylight at the rear.", confidence: "high" },
+        reviewRisks: [],
+        clarificationQuestions: ["Measure the window opening."],
+        metricWarning: "No metric dimensions were inferred from the uncalibrated source.",
+      },
+    }), { headers: { "Content-Type": "application/json" } })));
+
+    render(<InteriorinStudio />);
+    const source = new File(["image"], "real-room.jpg", { type: "image/jpeg" });
+    fireEvent.change(screen.getByLabelText(/optional photo or plan reference/i), { target: { files: [source] } });
+    fireEvent.click(screen.getByRole("button", { name: /generate three spatial directions/i }));
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/space-analysis", expect.objectContaining({ method: "POST" })));
+    expect(await screen.findByText(/visible-space read · medium confidence/i)).toBeInTheDocument();
+    expect(await screen.findAllByRole("radio")).toHaveLength(3);
+    expect(screen.getByText(/1 retained object · 1 opening/i)).toBeInTheDocument();
+    expect(screen.getByText("Measure the window opening.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Generate in-space concept" }));
+    expect(await screen.findByRole("img", { name: "AI-generated in-space concept for Clear Passage" })).toBeInTheDocument();
+    expect(screen.getByText("Presentation hypothesis only.")).toBeInTheDocument();
   });
 });

@@ -478,7 +478,23 @@ tfoot th, tfoot td { background: var(--canvas); }
 .file-field span { display: grid; gap: var(--space-1); }
 .file-field small { color: var(--graphite); font-weight: 400; }
 .file-field input { grid-column: 2; min-height: 44px; width: 100%; color: var(--graphite); font-size: 13px; }
-.source-selected, .inline-note { display: flex; align-items: flex-start; gap: var(--space-2); margin: var(--space-3) 0 0; color: var(--verified); font-size: 13px; }
+.source-selected { display: grid; grid-template-columns: 112px 1fr; gap: var(--space-3); align-items: center; margin-top: var(--space-3); padding: var(--space-3); border: 1px solid var(--rule-soft); background: var(--paper-deep); color: var(--verified); }
+.source-selected > img { width: 112px; height: 72px; object-fit: cover; border: 1px solid var(--rule-soft); }
+.source-selected > p, .inline-note { display: flex; align-items: flex-start; gap: var(--space-2); margin: 0; font-size: 13px; }
+.source-selected > p span { display: grid; gap: 3px; color: var(--graphite); }
+.source-selected > p strong { color: var(--ink); }
+.inline-note { margin-top: var(--space-3); color: var(--verified); }
+.analysis-ledger { display: flex; align-items: flex-start; gap: var(--space-3); margin-top: var(--space-3); padding: var(--space-4); border: 1px solid var(--rule-soft); background: var(--paper-deep); }
+.analysis-ledger[data-status="analyzed"] { border-left: 3px solid var(--verified); }
+.analysis-ledger[data-status]:not([data-status="analyzed"]) { border-left: 3px solid var(--clay); }
+.analysis-ledger > svg { flex: 0 0 auto; margin-top: 2px; }
+.analysis-ledger p { margin: 0; color: var(--graphite); font-size: 13px; line-height: 1.5; }
+.analysis-ledger p strong { display: block; color: var(--ink); }
+.analysis-ledger dl { margin: var(--space-3) 0; border-top: 1px solid var(--rule-soft); }
+.analysis-ledger dl div { display: grid; grid-template-columns: 86px 1fr; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--rule-soft); font-size: 12px; }
+.analysis-ledger dt { color: var(--graphite); }
+.analysis-ledger dd { margin: 0; }
+.analysis-ledger small { color: var(--graphite); line-height: 1.45; }
 .form-error { display: flex; align-items: flex-start; gap: var(--space-2); margin: var(--space-3) 0 0; color: var(--danger); font-size: 14px; font-weight: 600; }
 .form-error svg { flex: 0 0 auto; margin-top: 2px; }
 .product-primary, .product-secondary, .voice-button {
@@ -530,6 +546,7 @@ tfoot th, tfoot td { background: var(--canvas); }
 
 .product-workbench { display: grid; grid-template-columns: minmax(0, 7fr) minmax(390px, 5fr); align-items: start; background: var(--model-ground); border-bottom: 1px solid var(--control-boundary); }
 .model-column { min-width: 0; position: sticky; top: 72px; }
+.model-column:has(.concept-studio) { position: relative; top: 0; }
 .model-heading { min-height: 88px; display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-4) clamp(16px, 3vw, 40px); background: var(--canvas); border-bottom: 1px solid var(--control-boundary); }
 .model-heading h2 { margin: var(--space-1) 0 0; font-size: 32px; }
 .model-heading > span { color: var(--graphite); font-family: var(--font-mono), monospace; font-size: 12px; }
@@ -539,6 +556,15 @@ tfoot th, tfoot td { background: var(--canvas); }
 .product-model-controls button { width: 44px; height: 44px; display: grid; place-items: center; color: var(--ink); background: var(--surface); border: 1px solid var(--control-boundary); }
 .product-model-controls button:hover { background: var(--canvas); border-color: var(--declared); }
 .product-model-help { position: absolute; right: var(--space-4); bottom: var(--space-4); margin: 0; padding: var(--space-2); color: var(--graphite); background: var(--surface); border: 1px solid var(--control-boundary); font-size: 12px; }
+.concept-studio { display: grid; gap: var(--space-5); padding: var(--space-6); border-top: 1px solid var(--control-boundary); background: var(--paper); }
+.concept-studio h3 { max-width: 24ch; margin: var(--space-2) 0; font-family: var(--font-serif), Georgia, serif; font-size: clamp(26px, 3vw, 40px); font-weight: 500; line-height: 1.02; }
+.concept-studio > div > p:last-child { max-width: 66ch; margin: 0; color: var(--graphite); }
+.concept-studio figure { margin: 0; border: 1px solid var(--control-boundary); background: var(--charcoal); }
+.concept-studio figure img { display: block; width: 100%; height: auto; max-height: 680px; object-fit: contain; }
+.concept-studio figcaption { display: grid; gap: var(--space-1); padding: var(--space-3) var(--space-4); color: var(--rule-soft); font-size: 12px; line-height: 1.45; }
+.concept-studio figcaption strong { color: var(--inverse); font-family: var(--font-mono), monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.concept-studio > button { justify-self: start; }
+.concept-status { display: flex; gap: var(--space-2); align-items: flex-start; margin: 0; padding: var(--space-4); border-left: 3px solid var(--clay); background: var(--paper-deep); color: var(--graphite); }
 .product-model-facts { max-width: min(430px, calc(100% - 32px)); position: absolute; z-index: 10; top: 72px; left: var(--space-4); padding: var(--space-4); background: var(--surface); border: 1px solid var(--control-boundary); box-shadow: 0 8px 24px rgba(20,24,21,.14); }
 .product-model-facts p { margin: 0 0 var(--space-3); }
 .product-model-facts ul { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
@@ -627,6 +653,9 @@ tfoot th, tfoot td { background: var(--canvas); }
   .promise-ledger div { grid-template-columns: 1fr; gap: var(--space-1); }
   .project-form { padding: var(--space-4); }
   .dimension-grid { grid-template-columns: 1fr; }
+  .source-selected { grid-template-columns: 1fr; }
+  .source-selected > img { width: 100%; height: 160px; }
+  .analysis-ledger dl div { grid-template-columns: 1fr; }
   .reason-plate { grid-template-columns: 32px minmax(0, 1fr); gap: var(--space-3); }
   .reason-plate > svg { display: none; }
   .reason-plate > span:nth-child(2) { grid-template-columns: 1fr; gap: var(--space-2); }

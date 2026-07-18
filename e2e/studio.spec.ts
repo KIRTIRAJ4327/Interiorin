@@ -50,3 +50,55 @@ test("exterior directions keep professional review boundaries visible", async ({
   await expect(page.getByText(/property boundary/i).first()).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("exterior-studio.png"), fullPage: true });
 });
+
+test("uploaded source observations become visible, non-metric scene evidence", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One browser is sufficient for the multimodal response contract.");
+  await page.route("**/api/concept-render", async (route) => route.fulfill({
+    contentType: "application/json",
+    body: JSON.stringify({
+      status: "generated",
+      disclosure: "Nano Banana presentation hypothesis; canonical geometry remains authoritative.",
+      imageDataUrl: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjAwIiBoZWlnaHQ9IjgwMCIgdmlld0JveD0iMCAwIDEyMDAgODAwIj48cmVjdCB3aWR0aD0iMTIwMCIgaGVpZ2h0PSI4MDAiIGZpbGw9IiNkOGQyYzMiLz48cmVjdCB4PSI4MCIgeT0iNDgwIiB3aWR0aD0iMTA0MCIgaGVpZ2h0PSIyNDAiIGZpbGw9IiNhN2E3OTYiLz48cmVjdCB4PSIxNjAiIHk9IjQyMCIgd2lkdGg9IjQwMCIgaGVpZ2h0PSIxNDAiIGZpbGw9IiM0YzYyNTgiLz48Y2lyY2xlIGN4PSI3NjAiIGN5PSI1MjAiIHI9IjEyMCIgZmlsbD0iI2I2NzQ1YSIvPjxwYXRoIGQ9Ik0xNjAgNDIwIDQwMCAyNjAgNTYwIDQyMCIgZmlsbD0iI2Y3ZjRmMCIgc3Ryb2tlPSIjMjEyNjIyIiBzdHJva2Utd2lkdGg9IjEyIi8+PC9zdmc+",
+      model: "gemini-contract-fixture",
+      createdAt: "2026-07-18T12:00:00.000Z",
+    }),
+  }));
+  await page.route("**/api/space-analysis", async (route) => route.fulfill({
+    contentType: "application/json",
+    body: JSON.stringify({
+      status: "analyzed",
+      disclosure: "Gemini identified visible cues only. Entered measurements remain the sole metric authority.",
+      model: "gemini-contract-fixture",
+      analysis: {
+        spaceKind: "interior",
+        spaceType: "living room",
+        summary: "A bright living room with a rear window and fixed bench.",
+        confidence: "medium",
+        openings: [{ kind: "window", label: "Rear window", position: "center", confidence: "high" }],
+        retainedObjects: [{ label: "Fixed bench", category: "seating", position: "left", confidence: "high", likelyMovable: false }],
+        styleCues: [{ label: "warm timber", confidence: "medium" }],
+        naturalLight: { level: "high", note: "Strong daylight at the rear.", confidence: "high" },
+        reviewRisks: [],
+        clarificationQuestions: ["Measure the window opening."],
+        metricWarning: "No metric dimensions were inferred from the uncalibrated source.",
+      },
+    }),
+  }));
+  await page.goto("/studio");
+  await page.getByLabel(/optional photo or plan reference/i).setInputFiles({
+    name: "real-room.svg",
+    mimeType: "image/svg+xml",
+    buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500"><rect width="800" height="500" fill="#d8d2c3"/><rect y="330" width="800" height="170" fill="#a7a796"/><rect x="80" y="120" width="260" height="210" fill="#f7f4f0" stroke="#212622" stroke-width="10"/><rect x="430" y="280" width="260" height="100" fill="#4c6258"/></svg>'),
+  });
+  await expect(page.getByRole("img", { name: "Selected space reference preview" })).toBeVisible();
+  await page.getByRole("button", { name: /generate three spatial directions/i }).click();
+
+  await expect(page.getByText(/visible-space read · medium confidence/i)).toBeVisible();
+  await expect(page.getByText(/1 retained object · 1 opening/i)).toBeVisible();
+  await expect(page.getByText("Measure the window opening.")).toBeVisible();
+  await expect(page.getByText(/No metric dimensions were inferred/i)).toBeVisible();
+  await page.getByRole("button", { name: "Generate in-space concept" }).click();
+  await expect(page.getByRole("img", { name: "AI-generated in-space concept for Clear Passage" })).toBeVisible();
+  await expect(page.getByText(/AI presentation concept · not measured/i)).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("analyzed-source-studio.png"), fullPage: true });
+});

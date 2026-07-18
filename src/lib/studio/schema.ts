@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { spatialSceneSchema } from "@/lib/spatial/schema";
+import { spaceAnalysisSchema } from "./analysis";
 
 export const studioProjectSchema = z.object({
   id: z.string().min(1),
@@ -17,6 +18,10 @@ export const studioProjectSchema = z.object({
     fileName: z.string().max(180).optional(),
     fileSize: z.number().nonnegative().optional(),
     authority: z.literal("user_declared"),
+    analysis: spaceAnalysisSchema.optional(),
+    analysisDisclosure: z.string().trim().min(1).max(300).optional(),
+    analysisModel: z.string().trim().min(1).max(100).optional(),
+    analysisRequestId: z.string().trim().min(1).max(180).optional(),
   }),
   createdAt: z.string().datetime(),
 });

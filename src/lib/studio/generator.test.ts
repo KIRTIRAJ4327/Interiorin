@@ -38,4 +38,41 @@ describe("instant studio option generation", () => {
     expect(options.every((option) => option.scene.constraints.some((constraint) => constraint.type === "property_boundary" && constraint.severity === "blocking"))).toBe(true);
     expect(options.flatMap((option) => option.tradeoffs).join(" ")).toMatch(/survey|drainage|utilities/i);
   });
+
+  it("turns analyzed openings and retained objects into unverified canonical scene evidence", () => {
+    const analyzed = studioProjectSchema.parse({
+      ...project("interior"),
+      source: {
+        mode: "photo_with_measurements",
+        fileName: "actual-room.jpg",
+        fileSize: 1024,
+        authority: "user_declared",
+        analysisDisclosure: "Visible cues only.",
+        analysisModel: "gemini-test",
+        analysis: {
+          spaceKind: "interior",
+          spaceType: "living room",
+          summary: "A living room with a window, fixed banquette, and low storage.",
+          confidence: "medium",
+          openings: [{ kind: "window", label: "Wide rear window", position: "center", confidence: "high" }],
+          retainedObjects: [
+            { label: "Fixed banquette", category: "seating", position: "left", confidence: "high", likelyMovable: false },
+            { label: "Low media cabinet", category: "storage", position: "right", confidence: "medium", likelyMovable: true },
+          ],
+          styleCues: [{ label: "warm timber", confidence: "medium" }],
+          naturalLight: { level: "high", note: "Daylight is visible through the rear window.", confidence: "high" },
+          reviewRisks: ["Window dimensions are unknown."],
+          clarificationQuestions: ["Measure the window width and sill height."],
+          metricWarning: "No metric dimensions were inferred from the uncalibrated source.",
+        },
+      },
+    });
+
+    const scene = generateStudioOptions(analyzed)[0]?.scene;
+    expect(scene?.openings[0]?.label).toBe("Wide rear window");
+    expect(scene?.openings[0]?.provenance.authority).toBe("observed_unverified");
+    expect(scene?.objects.find((object) => object.id === "sofa")).toMatchObject({ label: "Fixed banquette", protected: true });
+    expect(scene?.objects.find((object) => object.id === "storage")).toMatchObject({ label: "Low media cabinet", protected: false });
+    expect(scene?.constraints.some((constraint) => constraint.message === "Measure the window width and sill height.")).toBe(true);
+  });
 });

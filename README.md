@@ -4,9 +4,11 @@ Interiorin is an evidence-aware spatial design studio for real interior and exte
 
 ## What works now
 
-- Guided interior/exterior intake for empty or existing spaces, with user-entered width, depth, height, intent, and optional local reference metadata.
+- Guided interior/exterior intake for empty or existing spaces, with user-entered width, depth, height, intent, and an optional image/PDF source.
+- Credential-gated Gemini visual analysis that identifies visible openings, retained objects, light, and style cues as confidence-scored, non-metric evidence; provider failure is disclosed and never blocks dimension-driven generation.
 - Three materially distinct, deterministic spatial options generated from the entered envelope, each with rationale and tradeoffs.
 - A canonical interactive 3D workbench with mouse/touch controls and an always-available semantic facts view.
+- Optional Nano Banana in-space presentation concepts generated from the source photograph and current canonical option, clearly separated from the measured/evidence-aware 3D record.
 - Bounded browser voice transcription or typed refinement, compiled to a visible typed action and committed only after explicit confirmation.
 - Rejected mutations for protected existing objects, plus persistent action receipts.
 - Named local versions, factual scene comparison, and an architect/designer review package exported as JSON with sources, limitations, and open questions.
@@ -47,11 +49,12 @@ npm run build
 
 The browser suite builds and starts the production app, then runs the Studio and authority-proof journeys serially in desktop Chromium and mobile Chromium. Assertion screenshots are isolated under Playwright's disposable test output; curated proof render evidence is kept under `artifacts/screenshots/`.
 
-The current gate passes 15 test files / 39 tests, the optimized production build, and six production browser journeys with two intentional skips for single-browser-only cases. The original Forge proof verification remains in [docs/forge/verification-report.md](docs/forge/verification-report.md); the broader Studio slice is documented in [docs/studio-vertical-slice.md](docs/studio-vertical-slice.md).
+The current gate passes 17 test files / 45 tests, the optimized production build, and the production browser journeys across desktop/mobile with intentional skips for single-browser-only provider contracts. The original Forge proof verification remains in [docs/forge/verification-report.md](docs/forge/verification-report.md); the broader Studio slice is documented in [docs/studio-vertical-slice.md](docs/studio-vertical-slice.md).
 
 ## Truth boundaries
 
-- Studio geometry comes from dimensions entered by the user; an attached photo or plan contributes filename/type/size metadata only. There is no arbitrary photo-to-metric reconstruction yet.
+- Studio metric geometry comes from dimensions entered by the user. When Gemini is configured, an attached image/PDF can contribute confidence-scored visible openings, retained objects, light, and style cues—but never inferred metric dimensions or hidden conditions.
+- Nano Banana concepts are presentation hypotheses. They do not replace canonical 3D state, prove fit, preserve every pixel, or authorize procurement/construction.
 - Suggested furniture, planting, and materials are decision-support hypotheses, not observations, procurement advice, a survey, code review, or construction documentation.
 - Browser speech recognition provides transcription where supported. ElevenLabs is installed as an integration dependency but is not part of this credential-free slice.
 - Named versions persist in this browser's local storage; there is no account, cloud sync, or shared professional portal yet.
@@ -62,7 +65,7 @@ The current gate passes 15 test files / 39 tests, the optimized production build
 
 ## Next product frontier
 
-The next frontier is calibrated photo/video or scan ingestion, richer editable geometry, image-based presentation derivatives, cloud projects and collaboration, live provider-backed voice, and a professional review portal. Those capabilities remain roadmap items until implemented and verified.
+The next frontier is calibrated multi-view photo/video or scan reconstruction, richer direct geometry editing and collision solving, cloud projects and collaboration, live provider-backed voice, and a professional review portal. Those capabilities remain roadmap items until implemented and verified.
 
 ## Workspaces
 
