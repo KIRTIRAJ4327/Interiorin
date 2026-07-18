@@ -8,7 +8,7 @@ describe("prepared truth-contract scenes", () => {
     const action = {
       type: "move_object" as const,
       objectId: "table",
-      position: { x: 1.8, y: 0, z: 0 },
+      position: { x: 1.32, y: 0, z: 0 },
     };
     const before = evaluateTruthContract(preparedInteriorScene, action);
 

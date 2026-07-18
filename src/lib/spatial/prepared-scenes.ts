@@ -89,7 +89,7 @@ export const preparedInteriorScene: SpatialScene = spatialSceneSchema.parse({
       label: "Dining table",
       category: "table",
       assetId: "table-oval-oak",
-      transform: transform(0, 0, 0),
+      transform: transform(0.92, 0, 0),
       dimensions: { width: 1.4, height: 0.75, depth: 0.9, provenance: entered },
       materialIds: ["oak-mid"],
       protected: false,

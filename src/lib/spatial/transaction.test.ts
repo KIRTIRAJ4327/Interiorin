@@ -7,7 +7,7 @@ import { evaluateTruthContract } from "./truth-contract";
 const move = {
   type: "move_object" as const,
   objectId: "table",
-  position: { x: 1.8, y: 0, z: 0 },
+  position: { x: 1.32, y: 0, z: 0 },
 };
 
 describe("truth-contract commit", () => {
@@ -17,7 +17,7 @@ describe("truth-contract commit", () => {
     expect(() => commitTruthContractOutcome(preparedInteriorScene, outcome)).toThrow(
       "Cannot commit a confirmation_required",
     );
-    expect(preparedInteriorScene.objects.find((object) => object.id === "table")?.transform.position.x).toBe(0);
+    expect(preparedInteriorScene.objects.find((object) => object.id === "table")?.transform.position.x).toBe(0.92);
   });
 
   it("commits only the checked limited alternative and records both actions", () => {
@@ -37,7 +37,7 @@ describe("truth-contract commit", () => {
     expect(committed.receipt).toMatchObject({
       id: "receipt-1",
       decision: "limited",
-      requestedAction: { position: { x: 1.8 } },
+      requestedAction: { position: { x: 1.32 } },
       committedAction: { position: { x: 1.1 } },
       professionalReviewFlagIds: ["bookcase-bounds-review"],
     });
