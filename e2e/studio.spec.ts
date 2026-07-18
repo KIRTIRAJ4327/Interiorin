@@ -130,4 +130,10 @@ test("refinement reports footprint impact and supports typed undo", async ({ pag
   await expect(page.getByText("Replace Suggested sofa with compact two-seat sofa.")).toBeVisible();
   await page.getByRole("button", { name: /commit checked action/i }).click();
   await expect(page.locator(".action-receipts")).toContainText("can be replaced with the checked variant");
+
+  await page.getByLabel("Select object").selectOption("table");
+  await page.getByRole("button", { name: "Move Central table right 100 millimetres" }).click();
+  await expect(page.locator(".action-receipts")).toContainText("3D control · move Central table right 100 mm");
+  await page.getByRole("button", { name: "Rotate Central table left 15 degrees" }).click();
+  await expect(page.locator(".action-receipts")).toContainText("can rotate to the requested angle");
 });

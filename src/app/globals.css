@@ -559,6 +559,18 @@ tfoot th, tfoot td { background: var(--canvas); }
 .product-model-controls { position: absolute; z-index: 10; top: var(--space-4); left: var(--space-4); display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .product-model-controls button { width: 44px; height: 44px; display: grid; place-items: center; color: var(--ink); background: var(--surface); border: 1px solid var(--control-boundary); }
 .product-model-controls button:hover { background: var(--canvas); border-color: var(--declared); }
+.product-object-editor { width: min(310px, calc(100% - 32px)); position: absolute; z-index: 11; top: var(--space-4); right: var(--space-4); display: grid; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--control-boundary); background: color-mix(in srgb, var(--surface) 96%, transparent); box-shadow: 0 8px 24px rgba(20,24,21,.14); }
+.object-editor-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.object-editor-heading > span { display: inline-flex; align-items: center; gap: var(--space-2); font-family: var(--font-mono), monospace; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.object-editor-heading button { width: 44px; height: 44px; display: grid; place-items: center; background: transparent; border: 1px solid var(--rule-soft); }
+.product-object-editor label { display: grid; gap: var(--space-1); font-size: 12px; font-weight: 600; }
+.product-object-editor select { min-height: 44px; width: 100%; padding: 0 var(--space-3); color: var(--ink); background: var(--surface); border: 1px solid var(--control-boundary); }
+.product-object-editor p { display: grid; gap: 2px; margin: 0; font-size: 13px; }
+.product-object-editor p span, .product-object-editor small { color: var(--graphite); font-family: var(--font-mono), monospace; font-size: 11px; line-height: 1.45; }
+.object-editor-grid { display: grid; grid-template-columns: repeat(4, 44px); gap: var(--space-2); }
+.object-editor-grid button { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; gap: 2px; padding: 0; color: var(--ink); background: var(--canvas); border: 1px solid var(--control-boundary); }
+.object-editor-grid button:nth-last-child(-n+2) { width: auto; padding-inline: var(--space-2); }
+.object-editor-grid button span { font-family: var(--font-mono), monospace; font-size: 10px; }
 .product-model-help { position: absolute; right: var(--space-4); bottom: var(--space-4); margin: 0; padding: var(--space-2); color: var(--graphite); background: var(--surface); border: 1px solid var(--control-boundary); font-size: 12px; }
 .concept-studio { display: grid; gap: var(--space-5); padding: var(--space-6); border-top: 1px solid var(--control-boundary); background: var(--paper); }
 .concept-studio h3 { max-width: 24ch; margin: var(--space-2) 0; font-family: var(--font-serif), Georgia, serif; font-size: clamp(26px, 3vw, 40px); font-weight: 500; line-height: 1.02; }
@@ -675,6 +687,8 @@ tfoot th, tfoot td { background: var(--canvas); }
   .model-heading { align-items: flex-start; flex-direction: column; }
   .product-model, .product-model canvas, .product-model-fallback { min-height: 480px; }
   .product-model-help { display: none; }
+  .product-object-editor { top: 72px; }
+  .object-editor-grid { grid-template-columns: repeat(3, 44px); }
   .reason-rail > section { padding: var(--space-6) var(--space-4); }
   .source-ledger div { grid-template-columns: 1fr; gap: var(--space-1); }
   .composer-actions, .compare-selects { grid-template-columns: 1fr; }

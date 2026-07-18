@@ -89,4 +89,15 @@ describe("bounded studio refinement", () => {
     expect(sectionalResult.receipt.status).toBe("rejected");
     expect(sectionalResult.receipt.message).toMatch(/outside the entered space envelope/i);
   });
+
+  it("compiles relative rotation and mutates the canonical angle only after commit", () => {
+    const scene = generateStudioOptions({ ...project, condition: "empty" })[0]!.scene;
+    const parsed = parseStudioRefinement(scene, "Rotate the table left 15 degrees");
+    expect(parsed).toEqual(expect.objectContaining({ status: "ready", action: expect.objectContaining({ type: "rotate_object", objectId: "table" }) }));
+    if (parsed.status !== "ready") throw new Error("Expected a ready rotation.");
+    expect(scene.objects.find((object) => object.id === "table")?.transform.rotation.y).toBe(0);
+    const result = applyStudioRefinement(scene, parsed);
+    expect(result.receipt.status).toBe("accepted");
+    expect(result.scene.objects.find((object) => object.id === "table")?.transform.rotation.y).toBeCloseTo(Math.PI / 12);
+  });
 });

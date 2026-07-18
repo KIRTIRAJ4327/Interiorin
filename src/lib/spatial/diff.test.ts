@@ -62,6 +62,7 @@ describe("semantic scene comparison", () => {
     const after = structuredClone(before);
     after.objects[0]!.transform.position.x = 1;
     after.objects[0]!.assetId = "table-oval";
+    after.objects[0]!.transform.rotation.y = Math.PI / 2;
     after.zones[0]!.materialId = "walnut";
     after.environment = { warmth: "warm", intensity: "bright" };
 
@@ -81,5 +82,6 @@ describe("semantic scene comparison", () => {
       before: { warmth: "neutral", intensity: "normal" },
       after: { warmth: "warm", intensity: "bright" },
     });
+    expect(diff.rotatedObjects[0]).toMatchObject({ before: 0, after: Math.PI / 2 });
   });
 });

@@ -2,9 +2,9 @@
 
 import { ContactShadows, Edges, OrbitControls } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
-import { Minus, Plus, RotateCcw, RotateCw, Rows3 } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Minus, MousePointer2, Plus, RotateCcw, RotateCw, Rows3, X } from "lucide-react";
 import { Component, useEffect, useMemo, useState, type ErrorInfo, type ReactNode } from "react";
-import type { SceneObject, SpatialScene } from "@/lib/spatial/schema";
+import type { SceneAction, SceneObject, SpatialScene } from "@/lib/spatial/schema";
 
 type CameraPosition = [number, number, number];
 
@@ -21,13 +21,13 @@ const objectColors: Record<SceneObject["category"], string> = {
   structure: "#6f665b",
 };
 
-function SceneObjectMesh({ object }: { object: SceneObject }) {
+function SceneObjectMesh({ object, selected, onSelect }: { object: SceneObject; selected: boolean; onSelect: (objectId: string) => void }) {
   const { width, height, depth } = object.dimensions;
   const position: [number, number, number] = [object.transform.position.x, 0, object.transform.position.z];
 
   if (object.category === "tree") {
     return (
-      <group position={position}>
+      <group position={position} rotation={[0, object.transform.rotation.y, 0]} onClick={(event) => { event.stopPropagation(); onSelect(object.id); }}>
         <mesh position={[0, Math.min(1.2, height * 0.32), 0]} castShadow>
           <cylinderGeometry args={[0.12, 0.18, Math.min(2.2, height * 0.64), 16]} />
           <meshStandardMaterial color="#6f5b47" roughness={1} />
@@ -41,10 +41,10 @@ function SceneObjectMesh({ object }: { object: SceneObject }) {
   }
 
   return (
-    <mesh position={[position[0], height / 2, position[2]]} castShadow>
+    <mesh position={[position[0], height / 2, position[2]]} rotation={[0, object.transform.rotation.y, 0]} castShadow onClick={(event) => { event.stopPropagation(); onSelect(object.id); }}>
       <boxGeometry args={[width, height, depth]} />
       <meshStandardMaterial color={objectColors[object.category]} roughness={0.82} metalness={0} />
-      <Edges color={object.protected ? "#9b4835" : "#2f596a"} lineWidth={object.protected ? 2 : 1} />
+      <Edges color={selected ? "#d18b45" : object.protected ? "#9b4835" : "#2f596a"} lineWidth={selected || object.protected ? 2 : 1} />
     </mesh>
   );
 }
@@ -59,13 +59,15 @@ function CameraSync({ position, target }: { position: CameraPosition; target: Ca
   return null;
 }
 
-function Model({ scene, cameraPosition, target, width, depth, height }: {
+function Model({ scene, cameraPosition, target, width, depth, height, selectedObjectId, onSelectObject }: {
   scene: SpatialScene;
   cameraPosition: CameraPosition;
   target: CameraPosition;
   width: number;
   depth: number;
   height: number;
+  selectedObjectId: string;
+  onSelectObject: (objectId: string) => void;
 }) {
   const environment = scene.environment ?? { warmth: "neutral" as const, intensity: "normal" as const };
   const background = environment.warmth === "warm" ? "#ead8c0" : environment.warmth === "cool" ? "#d9e3e5" : scene.kind === "interior" ? "#e8e0d3" : "#dfe3d5";
@@ -95,15 +97,16 @@ function Model({ scene, cameraPosition, target, width, depth, height }: {
           </mesh>
         </>
       ) : null}
-      {scene.objects.map((object) => <SceneObjectMesh key={object.id} object={object} />)}
+      {scene.objects.map((object) => <SceneObjectMesh key={object.id} object={object} selected={object.id === selectedObjectId} onSelect={onSelectObject} />)}
       <ContactShadows position={[width / 2, 0.025, depth / 2]} opacity={0.14} scale={Math.max(width, depth) * 1.15} blur={2.4} far={Math.max(5, height * 2)} />
       <OrbitControls makeDefault target={target} enablePan={false} autoRotate={false} minPolarAngle={0.45} maxPolarAngle={1.42} minDistance={Math.max(4, Math.min(width, depth) * 0.8)} maxDistance={Math.max(width, depth) * 2.5} />
     </>
   );
 }
 
-export function StudioModel({ scene }: { scene: SpatialScene }) {
+export function StudioModel({ scene, onDirectAction }: { scene: SpatialScene; onDirectAction?: (action: SceneAction, summary: string) => void }) {
   const [semanticOpen, setSemanticOpen] = useState(false);
+  const [selectedObjectId, setSelectedObjectId] = useState("");
   const bounds = useMemo(() => {
     const points = scene.zones.flatMap((zone) => zone.polygon);
     const xs = points.map((point) => point.x);
@@ -117,6 +120,7 @@ export function StudioModel({ scene }: { scene: SpatialScene }) {
   const target = useMemo<CameraPosition>(() => [bounds.width / 2, Math.min(1.1, bounds.height * 0.3), bounds.depth / 2], [bounds]);
   const initialCamera = useMemo<CameraPosition>(() => [bounds.width * 1.05, Math.max(4.2, bounds.height * 1.45), bounds.depth * 1.45], [bounds]);
   const [cameraPosition, setCameraPosition] = useState<CameraPosition>(initialCamera);
+  const selectedObject = scene.objects.find((object) => object.id === selectedObjectId);
 
   function rotate() {
     setCameraPosition(([x, y, z]) => {
@@ -135,6 +139,20 @@ export function StudioModel({ scene }: { scene: SpatialScene }) {
     ]);
   }
 
+  function nudge(deltaX: number, deltaZ: number, label: string) {
+    if (!selectedObject || !onDirectAction) return;
+    onDirectAction({
+      type: "move_object",
+      objectId: selectedObject.id,
+      position: { ...selectedObject.transform.position, x: selectedObject.transform.position.x + deltaX, z: selectedObject.transform.position.z + deltaZ },
+    }, `3D control · move ${selectedObject.label} ${label} 100 mm.`);
+  }
+
+  function rotateObject(degrees: number) {
+    if (!selectedObject || !onDirectAction) return;
+    onDirectAction({ type: "rotate_object", objectId: selectedObject.id, rotationY: selectedObject.transform.rotation.y + degrees * Math.PI / 180 }, `3D control · rotate ${selectedObject.label} ${degrees > 0 ? "left" : "right"} ${Math.abs(degrees)} degrees.`);
+  }
+
   return (
     <div className="product-model" aria-label={`Interactive 3D model of ${scene.name}`}>
       <div className="product-model-controls" aria-label="3D view controls">
@@ -145,10 +163,25 @@ export function StudioModel({ scene }: { scene: SpatialScene }) {
         <button type="button" onClick={() => setSemanticOpen((current) => !current)} aria-expanded={semanticOpen} aria-label="Open model facts"><Rows3 aria-hidden="true" size={18} /></button>
       </div>
       <ProductModelBoundary scene={scene}>
-        <Canvas role="img" aria-label={`User-controlled 3D ${scene.kind} model for ${scene.name}`} shadows camera={{ position: initialCamera, fov: 40, near: 0.1, far: 120 }} dpr={[1, 1.5]}>
-          <Model scene={scene} cameraPosition={cameraPosition} target={target} {...bounds} />
+        <Canvas role="img" aria-label={`User-controlled 3D ${scene.kind} model for ${scene.name}`} shadows camera={{ position: initialCamera, fov: 40, near: 0.1, far: 120 }} dpr={[1, 1.5]} onPointerMissed={() => setSelectedObjectId("")}>
+          <Model scene={scene} cameraPosition={cameraPosition} target={target} selectedObjectId={selectedObjectId} onSelectObject={setSelectedObjectId} {...bounds} />
         </Canvas>
       </ProductModelBoundary>
+      {onDirectAction ? <div className="product-object-editor" aria-label="Direct 3D object controls">
+        <div className="object-editor-heading"><span><MousePointer2 aria-hidden="true" size={16} />Checked object edit</span>{selectedObject ? <button type="button" onClick={() => setSelectedObjectId("")} aria-label="Clear object selection"><X aria-hidden="true" size={16} /></button> : null}</div>
+        <label>Select object<select value={selectedObjectId} onChange={(event) => setSelectedObjectId(event.target.value)}><option value="">Choose from model</option>{scene.objects.map((object) => <option key={object.id} value={object.id}>{object.label}{object.protected ? " · protected" : ""}</option>)}</select></label>
+        {selectedObject ? <>
+          <p><strong>{selectedObject.label}</strong><span>x {selectedObject.transform.position.x.toFixed(2)} · z {selectedObject.transform.position.z.toFixed(2)} m · {Math.round(selectedObject.transform.rotation.y * 180 / Math.PI)}°</span></p>
+          {selectedObject.protected ? <small>Protected source object. Unlock it through a checked command before moving or rotating.</small> : <div className="object-editor-grid">
+            <button type="button" onClick={() => nudge(-0.1, 0, "left")} aria-label={`Move ${selectedObject.label} left 100 millimetres`}><ArrowLeft aria-hidden="true" size={18} /></button>
+            <button type="button" onClick={() => nudge(0, -0.1, "back")} aria-label={`Move ${selectedObject.label} back 100 millimetres`}><ArrowDown aria-hidden="true" size={18} /></button>
+            <button type="button" onClick={() => nudge(0, 0.1, "forward")} aria-label={`Move ${selectedObject.label} forward 100 millimetres`}><ArrowUp aria-hidden="true" size={18} /></button>
+            <button type="button" onClick={() => nudge(0.1, 0, "right")} aria-label={`Move ${selectedObject.label} right 100 millimetres`}><ArrowRight aria-hidden="true" size={18} /></button>
+            <button type="button" onClick={() => rotateObject(15)} aria-label={`Rotate ${selectedObject.label} left 15 degrees`}><RotateCcw aria-hidden="true" size={18} /><span>15°</span></button>
+            <button type="button" onClick={() => rotateObject(-15)} aria-label={`Rotate ${selectedObject.label} right 15 degrees`}><RotateCw aria-hidden="true" size={18} /><span>15°</span></button>
+          </div>}
+        </> : <small>Select an object in the model or list. Each nudge is validated and recorded before canonical mutation.</small>}
+      </div> : null}
       {semanticOpen ? <SceneFacts scene={scene} bounds={bounds} /> : null}
       <p className="product-model-help">User-controlled view · semantic facts remain available · no survey claim</p>
     </div>

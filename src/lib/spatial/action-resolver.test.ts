@@ -120,4 +120,13 @@ describe("bounded scene action resolver", () => {
     expect(receipt.status).toBe("rejected");
     expect(receipt.message).toMatch(/overlaps Heirloom cabinet/i);
   });
+
+  it("accepts a checked rotation and rejects rotation of protected objects", () => {
+    const accepted = resolveSceneAction(scene, { type: "rotate_object", objectId: "chair", rotationY: Math.PI / 2 }, context);
+    expect(accepted).toMatchObject({ status: "accepted", changedIds: ["chair"] });
+
+    const rejected = resolveSceneAction(scene, { type: "rotate_object", objectId: "heirloom", rotationY: Math.PI / 2 }, context);
+    expect(rejected.status).toBe("rejected");
+    expect(rejected.message).toMatch(/protected/i);
+  });
 });

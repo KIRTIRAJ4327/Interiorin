@@ -72,6 +72,21 @@ export function parseStudioRefinement(scene: SpatialScene, transcript: string): 
       summary: `Replace ${object.label} with ${variant.label}.`,
     };
   }
+
+  const rotationMatch = normalized.match(/^(?:rotate|turn)\s+(?:the\s+)?(.+?)\s+(?:(left|right|clockwise|counterclockwise)\s+)?(\d+(?:\.\d+)?)\s*(?:degrees?|deg)\b/);
+  if (rotationMatch && object) {
+    const direction = rotationMatch[2] ?? "clockwise";
+    const degreesText = rotationMatch[3];
+    if (!degreesText) return { status: "needs_clarification", question: "Add a rotation in degrees." };
+    const degrees = Number(degreesText);
+    const sign = direction === "left" || direction === "counterclockwise" ? 1 : -1;
+    const rotationY = object.transform.rotation.y + sign * degrees * Math.PI / 180;
+    return {
+      status: "ready",
+      action: sceneActionSchema.parse({ type: "rotate_object", objectId: object.id, rotationY }),
+      summary: `Rotate ${object.label} ${direction} ${degrees} degrees.`,
+    };
+  }
   const moveMatch = normalized.match(/(?:move|shift)\s+.+?\s+(left|right|east|west|forward|backward|back|north|south)\s+(\d+(?:\.\d+)?)\s*(cm|centimeters?|m|meters?)\b/);
 
   if (moveMatch && object) {
@@ -129,6 +144,9 @@ export function applyStudioRefinement(
   if (action.type === "move_object") {
     const object = next.objects.find((candidate) => candidate.id === action.objectId);
     if (object) object.transform.position = action.position;
+  } else if (action.type === "rotate_object") {
+    const object = next.objects.find((candidate) => candidate.id === action.objectId);
+    if (object) object.transform.rotation.y = action.rotationY;
   } else if (action.type === "set_material") {
     const zone = next.zones.find((candidate) => candidate.id === action.zoneId);
     if (zone) zone.materialId = action.materialId;

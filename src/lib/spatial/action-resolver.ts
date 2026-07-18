@@ -106,7 +106,8 @@ export function resolveSceneAction(
 
   const candidate = structuredClone(scene);
   const candidateObject = candidate.objects.find((item) => item.id === object.id);
-  if (candidateObject) candidateObject.transform.position = action.position;
+  if (candidateObject && action.type === "move_object") candidateObject.transform.position = action.position;
+  if (candidateObject && action.type === "rotate_object") candidateObject.transform.rotation.y = action.rotationY;
   const beforeReport = validateScene(scene);
   const candidateReport = validateScene(candidate);
   const blocking = candidateReport.findings.find((finding) => {
@@ -124,5 +125,5 @@ export function resolveSceneAction(
   if (
     scene.calibration.status === "approximate"
   ) warnings.push("Fit is approximate until the space is calibrated with a known measurement.");
-  return accepted(action, `${object.label} can move to the requested position.`, [object.id], warnings, context);
+  return accepted(action, action.type === "rotate_object" ? `${object.label} can rotate to the requested angle.` : `${object.label} can move to the requested position.`, [object.id], warnings, context);
 }

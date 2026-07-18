@@ -18,8 +18,12 @@ export type SceneValidationReport = {
 type Footprint = { minX: number; maxX: number; minZ: number; maxZ: number };
 
 function footprint(object: SceneObject): Footprint {
-  const halfWidth = object.dimensions.width * Math.abs(object.transform.scale.x) / 2;
-  const halfDepth = object.dimensions.depth * Math.abs(object.transform.scale.z) / 2;
+  const scaledWidth = object.dimensions.width * Math.abs(object.transform.scale.x);
+  const scaledDepth = object.dimensions.depth * Math.abs(object.transform.scale.z);
+  const cosine = Math.abs(Math.cos(object.transform.rotation.y));
+  const sine = Math.abs(Math.sin(object.transform.rotation.y));
+  const halfWidth = (scaledWidth * cosine + scaledDepth * sine) / 2;
+  const halfDepth = (scaledWidth * sine + scaledDepth * cosine) / 2;
   return {
     minX: object.transform.position.x - halfWidth,
     maxX: object.transform.position.x + halfWidth,
@@ -125,4 +129,3 @@ export function validateScene(scene: SpatialScene): SceneValidationReport {
     findings,
   };
 }
-

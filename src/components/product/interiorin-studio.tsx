@@ -26,7 +26,7 @@ import {
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState, useTransition, type FormEvent } from "react";
 import { compareScenes } from "@/lib/spatial/diff";
-import type { SpatialScene } from "@/lib/spatial/schema";
+import type { SceneAction, SpatialScene } from "@/lib/spatial/schema";
 import { validateScene } from "@/lib/spatial/validation";
 import { spaceAnalysisEnvelopeSchema, type SpaceAnalysisEnvelope } from "@/lib/studio/analysis";
 import { conceptRenderEnvelopeSchema, type ConceptRenderEnvelope } from "@/lib/studio/presentation";
@@ -216,13 +216,13 @@ export function InteriorinStudio() {
     setParsedRefinement(parseStudioRefinement(scene, command));
   }
 
-  function applyRefinement() {
-    if (!scene || parsedRefinement?.status !== "ready") return;
-    if (parsedRefinement.action.type === "undo") {
+  function commitReadyRefinement(ready: Extract<ParsedRefinement, { status: "ready" }>, transcript: string) {
+    if (!scene) return;
+    if (ready.action.type === "undo") {
       const previous = sceneHistory[0];
       const nextReceipt: StudioReceipt = {
         id: crypto.randomUUID(),
-        transcript: command,
+        transcript,
         summary: previous ? "Restored the previous committed canonical scene." : "Nothing has been committed to undo.",
         status: previous ? "accepted" : "rejected",
         warnings: [],
@@ -237,10 +237,10 @@ export function InteriorinStudio() {
       setConceptRender(undefined);
       return;
     }
-    const result = applyStudioRefinement(scene, parsedRefinement);
+    const result = applyStudioRefinement(scene, ready);
     const nextReceipt: StudioReceipt = {
       id: result.receipt.id,
-      transcript: command,
+      transcript,
       summary: result.receipt.message,
       status: result.receipt.status,
       warnings: result.receipt.warnings,
@@ -251,6 +251,15 @@ export function InteriorinStudio() {
     setReceipts((current) => [nextReceipt, ...current]);
     setParsedRefinement(undefined);
     setConceptRender(undefined);
+  }
+
+  function applyRefinement() {
+    if (parsedRefinement?.status !== "ready") return;
+    commitReadyRefinement(parsedRefinement, command);
+  }
+
+  function commitDirectAction(action: SceneAction, summary: string) {
+    commitReadyRefinement({ status: "ready", action, summary }, summary);
   }
 
   async function generateConcept() {
@@ -463,7 +472,7 @@ export function InteriorinStudio() {
           <section className="product-workbench" id="workbench" aria-labelledby="workbench-title">
             <div className="model-column">
               <div className="model-heading"><div><p className="product-eyebrow">03 · canonical workbench</p><h2 id="workbench-title">{selectedOption.name}</h2></div><span>{project.kind} · {project.dimensions.widthM.toFixed(1)} × {project.dimensions.depthM.toFixed(1)} m</span></div>
-              <StudioModel scene={scene} />
+              <StudioModel scene={scene} onDirectAction={commitDirectAction} />
               {sourceFile?.type.startsWith("image/") ? <section className="concept-studio" aria-labelledby="concept-title">
                 <div><p className="product-eyebrow">Presentation derivative</p><h3 id="concept-title">See this direction in the photographed space.</h3><p>Nano Banana can edit the source into a visual hypothesis. The canonical 3D scene and evidence ledger remain the decision record.</p></div>
                 {conceptRender?.status === "generated" && conceptRender.imageDataUrl ? <figure>
@@ -600,6 +609,7 @@ function SemanticDiff({ first, second, diff }: { first: StudioVersion; second: S
     ["Objects added", diff.addedObjects.map((item) => item.label).join(", ") || "None"],
     ["Objects removed", diff.removedObjects.map((item) => item.label).join(", ") || "None"],
     ["Objects moved", diff.movedObjects.map((item) => `${item.label}: x ${item.before.x.toFixed(2)}→${item.after.x.toFixed(2)}, z ${item.before.z.toFixed(2)}→${item.after.z.toFixed(2)} m`).join("; ") || "None"],
+    ["Objects rotated", diff.rotatedObjects.map((item) => `${item.label}: ${Math.round(item.before * 180 / Math.PI)}°→${Math.round(item.after * 180 / Math.PI)}°`).join("; ") || "None"],
     ["Materials", diff.materialChanges.map((item) => `${item.label}: ${item.before}→${item.after}`).join("; ") || "None"],
     ["Lighting", diff.environmentChange ? `${diff.environmentChange.before.warmth}/${diff.environmentChange.before.intensity}→${diff.environmentChange.after.warmth}/${diff.environmentChange.after.intensity}` : "None"],
     ["Resolved constraints", diff.resolvedConstraints.map((item) => item.message).join("; ") || "None"],

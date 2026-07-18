@@ -2,8 +2,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./studio-model", () => ({
-  StudioModel: ({ scene }: { scene: { name: string; objects: Array<{ id: string; transform: { position: { x: number } } }> } }) => (
-    <div data-testid="studio-model">{scene.name} · table x {scene.objects.find((object) => object.id === "table")?.transform.position.x}</div>
+  StudioModel: ({ scene, onDirectAction }: { scene: { name: string; objects: Array<{ id: string; label: string; transform: { position: { x: number; y: number; z: number } } }> }; onDirectAction?: (action: { type: "move_object"; objectId: string; position: { x: number; y: number; z: number } }, summary: string) => void }) => (
+    <div data-testid="studio-model">{scene.name} · table x {scene.objects.find((object) => object.id === "table")?.transform.position.x}<button type="button" onClick={() => { const table = scene.objects.find((object) => object.id === "table"); if (table) onDirectAction?.({ type: "move_object", objectId: "table", position: { ...table.transform.position, x: table.transform.position.x + 0.1 } }, "3D control · move Central table right 100 mm."); }}>Mock direct nudge</button></div>
   ),
 }));
 
@@ -68,6 +68,18 @@ describe("full Interiorin studio journey", () => {
     fireEvent.click(screen.getByRole("button", { name: /compile action/i }));
     fireEvent.click(screen.getByRole("button", { name: /commit checked action/i }));
     expect(screen.getByText("Restored the previous committed canonical scene.")).toBeInTheDocument();
+  });
+
+  it("routes direct 3D controls through canonical mutation, history, and receipts", async () => {
+    render(<InteriorinStudio />);
+    fireEvent.click(screen.getByRole("button", { name: /empty space/i }));
+    fireEvent.click(screen.getByRole("button", { name: /generate three spatial directions/i }));
+    await screen.findAllByRole("radio");
+    const before = screen.getByTestId("studio-model").textContent;
+    fireEvent.click(screen.getByRole("button", { name: "Mock direct nudge" }));
+    expect(screen.getByTestId("studio-model").textContent).not.toBe(before);
+    expect(screen.getByText(/Central table can move to the requested position/i)).toBeInTheDocument();
+    expect(screen.getByText("3D control · move Central table right 100 mm.")).toBeInTheDocument();
   });
 
   it("analyzes an uploaded space and carries visible observations into the workbench", async () => {

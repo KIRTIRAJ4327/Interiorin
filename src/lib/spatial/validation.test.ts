@@ -48,4 +48,15 @@ describe("canonical scene spatial validation", () => {
     const clearance = report.findings.find((finding) => finding.type === "clearance");
     expect(clearance).toEqual(expect.objectContaining({ severity: "review", requiredMeters: 0.9 }));
   });
+
+  it("uses the rotated axis-aligned footprint instead of the unrotated box", () => {
+    const scene = structuredClone(generateStudioOptions(project)[0]!.scene);
+    const table = scene.objects.find((object) => object.id === "table")!;
+    table.dimensions.width = 1.8;
+    table.dimensions.depth = 0.9;
+    table.transform.position = { x: 3.4, y: 0, z: 0.6 };
+    table.transform.rotation.y = Math.PI / 2;
+    const report = validateScene(scene);
+    expect(report.findings).toContainEqual(expect.objectContaining({ id: "envelope:table", severity: "blocking" }));
+  });
 });

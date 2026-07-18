@@ -181,6 +181,11 @@ export const sceneActionSchema = z.discriminatedUnion("type", [
     position: vector3Schema,
   }),
   z.object({
+    type: z.literal("rotate_object"),
+    objectId: z.string().min(1),
+    rotationY: z.number().finite(),
+  }),
+  z.object({
     type: z.literal("protect_object"),
     objectId: z.string().min(1),
     protected: z.boolean(),

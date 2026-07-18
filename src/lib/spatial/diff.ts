@@ -11,6 +11,7 @@ export type SemanticSceneDiff = {
   addedObjects: SceneObject[];
   removedObjects: SceneObject[];
   movedObjects: ValueChange<Vector3>[];
+  rotatedObjects: ValueChange<number>[];
   replacedObjects: ValueChange<string>[];
   protectionChanges: ValueChange<boolean>[];
   materialChanges: ValueChange<string>[];
@@ -33,6 +34,7 @@ function objectChanges(before: SpatialScene, after: SpatialScene) {
   const addedObjects = after.objects.filter((object) => !beforeObjects.has(object.id));
   const removedObjects = before.objects.filter((object) => !afterObjects.has(object.id));
   const movedObjects: ValueChange<Vector3>[] = [];
+  const rotatedObjects: ValueChange<number>[] = [];
   const replacedObjects: ValueChange<string>[] = [];
   const protectionChanges: ValueChange<boolean>[] = [];
 
@@ -55,6 +57,9 @@ function objectChanges(before: SpatialScene, after: SpatialScene) {
         after: next.assetId,
       });
     }
+    if (previous.transform.rotation.y !== next.transform.rotation.y) {
+      rotatedObjects.push({ id: previous.id, label: previous.label, before: previous.transform.rotation.y, after: next.transform.rotation.y });
+    }
     if (previous.protected !== next.protected) {
       protectionChanges.push({
         id: previous.id,
@@ -64,7 +69,7 @@ function objectChanges(before: SpatialScene, after: SpatialScene) {
       });
     }
   }
-  return { addedObjects, removedObjects, movedObjects, replacedObjects, protectionChanges };
+  return { addedObjects, removedObjects, movedObjects, rotatedObjects, replacedObjects, protectionChanges };
 }
 
 function zoneChanges(before: SpatialZone[], after: SpatialZone[]): ValueChange<string>[] {
