@@ -209,6 +209,12 @@ export const sceneActionSchema = z.discriminatedUnion("type", [
 ]);
 export type SceneAction = z.infer<typeof sceneActionSchema>;
 
+export function freezeSceneAction(candidate: SceneAction): SceneAction {
+  const action = sceneActionSchema.parse(candidate);
+  if (action.type === "move_object") Object.freeze(action.position);
+  return Object.freeze(action);
+}
+
 export const actionReceiptSchema = z.object({
   id: z.string().min(1),
   action: sceneActionSchema,

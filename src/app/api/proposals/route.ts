@@ -31,16 +31,24 @@ export async function POST(request: Request) {
 
   const apiKey = process.env.OPENAI_API_KEY;
   const liveEnabled = process.env.ENABLE_LIVE_OPENAI === "true";
-  if (!apiKey || !liveEnabled) {
+  const canaryResponseId = process.env.OPENAI_CANARY_RESPONSE_ID?.trim();
+  if (!apiKey || !liveEnabled || !canaryResponseId) {
     const disclosure = !apiKey
       ? "Prepared deterministic clarification; OPENAI_API_KEY is not configured."
-      : "Prepared deterministic clarification; live OpenAI is disabled until its canary is verified.";
+      : !liveEnabled
+        ? "Prepared deterministic clarification; live OpenAI is disabled until its canary is verified."
+        : "Prepared deterministic clarification; no durable Terra canary evidence is configured.";
     return NextResponse.json(
       fallback(parsed.data.request, disclosure),
     );
   }
 
   const model = process.env.OPENAI_MODEL ?? defaultModel;
+  if (model !== defaultModel) {
+    return NextResponse.json(
+      fallback(parsed.data.request, `Prepared deterministic clarification; unsupported live model ${model}.`),
+    );
+  }
   try {
     const client = new OpenAI({ apiKey });
     const response = await client.responses.parse({
@@ -57,14 +65,14 @@ export async function POST(request: Request) {
       },
     }, { signal: AbortSignal.timeout(6000) });
 
-    if (!response.output_parsed) {
+    if (!response.output_parsed || !response.id) {
       return NextResponse.json(
         fallback(parsed.data.request, "GPT-5.6 returned no typed proposal; prepared fallback is active."),
       );
     }
 
     const envelope: ProposalEnvelope = {
-      mode: "gpt-5.6",
+      mode: "gpt-5.6-terra",
       model,
       requestId: response.id,
       result: response.output_parsed,

@@ -933,6 +933,66 @@ input:focus-visible {
   color: var(--muted);
 }
 
+.receipt-evidence {
+  margin-top: var(--space-4);
+  border-top: 1px solid var(--linen);
+  padding-top: var(--space-3);
+}
+
+.receipt-evidence summary {
+  min-height: 44px;
+  cursor: pointer;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.76rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.receipt-evidence h4 {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.receipt-evidence p,
+.receipt-evidence small {
+  display: block;
+  margin: var(--space-2) 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.receipt-evidence ol {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.receipt-evidence li {
+  display: grid;
+  gap: 2px;
+  border-left: 2px solid var(--moss);
+  padding-left: var(--space-2);
+  font-size: 0.7rem;
+}
+
+.receipt-evidence li span {
+  color: var(--muted);
+}
+
+.receipt-hash {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 0.62rem;
+  line-height: 1.35;
+}
+
 @media (max-width: 1180px) {
   .studio-grid {
     grid-template-columns: minmax(16rem, 0.7fr) minmax(30rem, 1.5fr);

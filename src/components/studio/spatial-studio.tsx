@@ -4,21 +4,21 @@ import { useState } from "react";
 import { ArrowRight, Check, CircleAlert, LockKeyhole, RotateCcw, Ruler, Sparkles } from "lucide-react";
 import {
   preparedProposalFallback,
+  proposalEnvelopeSchema,
   proposalToSceneAction,
-  type ProposalEnvelope,
   type ProposalProviderMode,
 } from "@/lib/ai/proposal";
 import { declareObjectWidthForSession } from "@/lib/spatial/fact-authority";
 import { clonePreparedScene } from "@/lib/spatial/prepared-scenes";
 import { buildAuthorityProof, type AuthorityProof } from "@/lib/spatial/proof";
-import type { SceneAction, SpatialScene } from "@/lib/spatial/schema";
+import { freezeSceneAction, type SceneAction, type SpatialScene } from "@/lib/spatial/schema";
 import { buildBasicReceipt, type BasicReceipt } from "@/lib/spatial/receipt";
 import { commitTruthContractOutcome } from "@/lib/spatial/transaction";
 import { evaluateTruthContract, type TruthContractOutcome } from "@/lib/spatial/truth-contract";
 import { SceneCanvas } from "./scene-canvas";
 
 const demoRequest = "Move the dining table 40 cm toward the bookcase. Keep the 90 cm path and do not touch the heirloom bookcase.";
-const demoAction: SceneAction = { type: "move_object", objectId: "table", position: { x: 1.32, y: 0, z: 0 } };
+const demoAction = freezeSceneAction({ type: "move_object", objectId: "table", position: { x: 1.32, y: 0, z: 0 } });
 type Stage = "ready" | "evidence_required" | "evidence_recorded" | "limited" | "committed";
 
 const authorityLabel = {
@@ -58,7 +58,7 @@ export function SpatialStudio() {
       const prepared = preparedProposalFallback(demoRequest);
       setProviderMode("prepared_fallback");
       setProviderDisclosure("Presenter selected offline deterministic parser; no model call was attempted.");
-      if (prepared.status === "resolved") action = proposalToSceneAction(scene, prepared);
+      if (prepared.status === "resolved") action = freezeSceneAction(proposalToSceneAction(scene, prepared));
       setFrozenAction(action);
       const next = evaluateTruthContract(scene, action);
       setOutcome(next);
@@ -73,22 +73,22 @@ export function SpatialStudio() {
         body: JSON.stringify({ request: demoRequest }),
       });
       if (!response.ok) throw new Error("Proposal endpoint rejected the request");
-      const envelope = (await response.json()) as ProposalEnvelope;
+      const envelope = proposalEnvelopeSchema.parse(await response.json());
       setProviderMode(envelope.mode);
-      setProviderModel(envelope.model);
-      setProviderRequestId(envelope.requestId);
+      setProviderModel(envelope.mode === "gpt-5.6-terra" ? envelope.model : undefined);
+      setProviderRequestId(envelope.mode === "gpt-5.6-terra" ? envelope.requestId : undefined);
       setProviderDisclosure(envelope.disclosure);
       if (envelope.result.status === "needs_clarification") {
         setProviderDisclosure(envelope.result.question);
         setIsClarifying(false);
         return;
       }
-      action = proposalToSceneAction(scene, envelope.result);
+      action = freezeSceneAction(proposalToSceneAction(scene, envelope.result));
     } catch {
       const prepared = preparedProposalFallback(demoRequest);
       setProviderMode("prepared_fallback");
       setProviderDisclosure("Proposal endpoint unavailable; prepared deterministic clarification is active.");
-      if (prepared.status === "resolved") action = proposalToSceneAction(scene, prepared);
+      if (prepared.status === "resolved") action = freezeSceneAction(proposalToSceneAction(scene, prepared));
     }
 
     setFrozenAction(action);
@@ -192,7 +192,7 @@ export function SpatialStudio() {
         <aside className="decision-panel" id="decision-panel" aria-labelledby="decision-title">
           <PanelHeading index="02" eyebrow="Pre-commit check" title="Decision trace" id="decision-title" />
           <div className="proposal-card">
-            <div className="proposal-source"><Sparkles aria-hidden="true" size={15} />{providerMode === "gpt-5.6" ? "GPT-5.6 typed proposal" : providerMode === "prepared_fallback" ? "Prepared typed proposal" : "Proposal awaiting check"}</div>
+            <div className="proposal-source"><Sparkles aria-hidden="true" size={15} />{providerMode === "gpt-5.6-terra" ? "GPT-5.6 Terra typed proposal" : providerMode === "prepared_fallback" ? "Prepared typed proposal" : "Proposal awaiting check"}</div>
             <p>{demoRequest}</p><code>move(table_01, x: +{(requestedCentimeters / 100).toFixed(2)}m)</code><small>{providerDisclosure}</small>
             <button className="mode-toggle" type="button" role="switch" aria-checked={forceOffline} onClick={() => setForceOffline((current) => !current)}><span aria-hidden="true" />Offline proof mode {forceOffline ? "on" : "off"}</button>
           </div>
@@ -212,7 +212,27 @@ export function SpatialStudio() {
           </DecisionState> : null}
 
           {stage === "committed" && receipt ? <DecisionState className="receipt-state" kicker="COMMITTED WITH RECEIPT" title="The checked alternative is now canonical." body="Requested and committed actions remain distinct in the record." icon={<Check aria-hidden="true" size={15} />}>
-            <dl><div><dt>Requested</dt><dd>+{requestedCentimeters} cm</dd></div><div><dt>Committed</dt><dd>+18 cm</dd></div><div><dt>Fact bases</dt><dd>{receipt.factBases.length} / 5</dd></div><div><dt>Review</dt><dd>{receipt.professionalReview.required ? receipt.professionalReview.status : "not required"}</dd></div><div><dt>Provider</dt><dd>{receipt.provider.mode === "gpt-5.6" ? "live Terra" : "offline"}</dd></div><div><dt>Policy</dt><dd>{receipt.policyRef.version}</dd></div></dl>
+            <dl><div><dt>Requested</dt><dd>+{requestedCentimeters} cm</dd></div><div><dt>Committed</dt><dd>+18 cm</dd></div><div><dt>Fact bases</dt><dd>{receipt.factBases.length} / 5</dd></div><div><dt>Review</dt><dd>{receipt.professionalReview.required ? receipt.professionalReview.status : "not required"}</dd></div><div><dt>Provider</dt><dd>{receipt.provider.mode === "gpt-5.6-terra" ? "live Terra" : "offline"}</dd></div><div><dt>Policy</dt><dd>{receipt.policyRef.version}</dd></div></dl>
+            <details className="receipt-evidence" open>
+              <summary>Decision evidence</summary>
+              <h4>Five authorizing bases</h4>
+              <ol>{receipt.factBases.map((fact) => <li key={fact.factId}><code>{fact.factId}</code><span>{fact.authority} · {fact.basis}</span></li>)}</ol>
+              <h4>Provider truth</h4>
+              <p>{receipt.provider.mode === "gpt-5.6-terra" ? `${receipt.provider.model} · ${receipt.provider.requestId}` : "Prepared fallback · no model request"}</p>
+              <small>{receipt.provider.disclosure}</small>
+              <h4>Policy + attestation</h4>
+              <p><code>{receipt.policyRef.id}@{receipt.policyRef.version}</code></p>
+              <code className="receipt-hash">{receipt.policyRef.hash}</code>
+              <p>{receipt.sessionAttestation.statement}: <strong>{receipt.sessionAttestation.sourceLabel}</strong></p>
+              <h4>Proof digests</h4>
+              <p>Geometry <code className="receipt-hash">{receipt.proof.geometryBefore.hash}</code></p>
+              <p>Transaction <code className="receipt-hash">{receipt.proof.transactionBefore.hash}</code></p>
+              <p>Authority before <code className="receipt-hash">{receipt.proof.authorityBefore.hash}</code></p>
+              <p>Authority after <code className="receipt-hash">{receipt.proof.authorityAfter.hash}</code></p>
+              <h4>Checked scene diff</h4>
+              <p><code>{receipt.sceneDiff[0].entityId}.{receipt.sceneDiff[0].field}</code> {receipt.sceneDiff[0].before} → {receipt.sceneDiff[0].after}</p>
+              <p>Professional review: <strong>{receipt.professionalReview.status}</strong> · {receipt.professionalReview.reason}</p>
+            </details>
             <p className="receipt-id">Receipt {receipt.id.slice(0, 8)}</p>
           </DecisionState> : null}
           {proof ? <ProofPanel proof={proof} /> : null}

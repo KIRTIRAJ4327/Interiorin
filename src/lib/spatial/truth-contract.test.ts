@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { declareObjectWidthForSession } from "./fact-authority";
 import type { SpatialScene } from "./schema";
 import { evaluateTruthContract } from "./truth-contract";
@@ -105,6 +105,24 @@ function room(): SpatialScene {
 }
 
 describe("truth contract", () => {
+  it("returns from Pass A before the clearance solver can compute an alternative", () => {
+    const solver = vi.fn();
+    const outcome = evaluateTruthContract(
+      room(),
+      {
+        type: "move_object",
+        objectId: "table",
+        position: { x: 1.32, y: 0, z: 0 },
+      },
+      { findClearanceAlternative: solver },
+    );
+
+    expect(outcome.decision).toBe("confirmation_required");
+    expect(outcome.effectiveAction).toBeUndefined();
+    expect(solver).not.toHaveBeenCalled();
+    expect(JSON.stringify(outcome)).not.toMatch(/180|18 cm|1\.1(?:00)?/i);
+  });
+
   it("limits an adversarial move to the maximum valid clearance", () => {
     const measured = declareObjectWidthForSession(room(), "bookcase", {
       width: 1,

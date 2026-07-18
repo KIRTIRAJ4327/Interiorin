@@ -22,15 +22,23 @@ export const proposalRequestSchema = z.object({
   request: z.string().trim().min(3).max(500),
 });
 
-export type ProposalProviderMode = "gpt-5.6" | "prepared_fallback";
+export const proposalEnvelopeSchema = z.discriminatedUnion("mode", [
+  z.object({
+    mode: z.literal("prepared_fallback"),
+    result: clarifiedProposalSchema,
+    disclosure: z.string().trim().min(1),
+  }),
+  z.object({
+    mode: z.literal("gpt-5.6-terra"),
+    model: z.literal("gpt-5.6-terra"),
+    requestId: z.string().trim().min(1),
+    result: clarifiedProposalSchema,
+    disclosure: z.string().trim().min(1),
+  }),
+]);
 
-export type ProposalEnvelope = {
-  mode: ProposalProviderMode;
-  model?: string;
-  requestId?: string;
-  result: ClarifiedProposal;
-  disclosure: string;
-};
+export type ProposalEnvelope = z.infer<typeof proposalEnvelopeSchema>;
+export type ProposalProviderMode = ProposalEnvelope["mode"];
 
 export function preparedProposalFallback(request: string): ClarifiedProposal {
   const normalized = request.toLowerCase();

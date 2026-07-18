@@ -1,14 +1,22 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const { sceneCanvasSpy } = vi.hoisted(() => ({ sceneCanvasSpy: vi.fn() }));
+
 vi.mock("@/components/studio/scene-canvas", () => ({
-  SceneCanvas: () => <div data-testid="scene-canvas">Prepared 3D scene</div>,
+  SceneCanvas: (props: unknown) => {
+    sceneCanvasSpy(props);
+    return <div data-testid="scene-canvas">Prepared 3D scene</div>;
+  },
 }));
 
 import Home from "./page";
 
 describe("authority-gated spatial proof", () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    sceneCanvasSpy.mockClear();
+  });
 
   it("changes the outcome only after the supporting measurement gains authority", async () => {
     vi.stubGlobal(
@@ -41,6 +49,16 @@ describe("authority-gated spatial proof", () => {
     for (const leaked of ["18 cm", "180 mm", "+18", "+180", "1,100 mm"]) {
       expect(document.body).not.toHaveTextContent(leaked);
     }
+    const accessibleMetadata = Array.from(
+      document.querySelectorAll("[aria-label], [aria-description], [title]"),
+      (element) => ["aria-label", "aria-description", "title"]
+        .map((attribute) => element.getAttribute(attribute) ?? "")
+        .join(" "),
+    ).join(" ");
+    expect(accessibleMetadata).not.toMatch(/180 mm|18 cm|\+180|\+18|1,100 mm/i);
+    expect(sceneCanvasSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({ previewPosition: undefined }),
+    );
     expect(screen.queryByRole("button", { name: /accept/i })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /record measurement/i }));

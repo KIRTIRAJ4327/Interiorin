@@ -24,4 +24,7 @@ test("offline causal proof blocks, authorizes, limits, and commits", async ({ pa
 
   await expect(page.getByText("The checked alternative is now canonical.")).toBeVisible();
   await expect(page.getByText("+18 cm", { exact: true })).toHaveCount(3);
+  await expect(page.getByText("Five authorizing bases")).toBeVisible();
+  await expect(page.getByText("Prepared fallback · no model request")).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("studio-receipt.png"), fullPage: true });
 });

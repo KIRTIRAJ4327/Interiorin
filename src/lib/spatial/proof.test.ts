@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { declareObjectWidthForSession } from "./fact-authority";
 import { preparedInteriorScene } from "./prepared-scenes";
-import { authorityProjection, buildAuthorityProof } from "./proof";
+import { authorityProjection, buildAuthorityProof, canonicalBytes } from "./proof";
 
 const action = {
   type: "move_object" as const,
@@ -12,11 +12,11 @@ const action = {
 describe("A/B authority proof", () => {
   it("enumerates exactly the five numeric facts consumed by the solver", () => {
     expect(authorityProjection(preparedInteriorScene).map((fact) => fact.factId)).toEqual([
-      "table.center_x",
-      "table.width",
-      "bookcase.center_x",
+      "table.center_x_mm",
+      "table.width_mm",
+      "bookcase.center_x_mm",
       "bookcase.width_mm",
-      "path.minimum_clearance",
+      "path.minimum_clearance_mm",
     ]);
   });
 
@@ -40,6 +40,20 @@ describe("A/B authority proof", () => {
       },
     ]);
     expect(proof.geometry.before.hash).toMatch(/^sha256:[0-9a-f]{64}$/);
+
+    const beforeBookcase = preparedInteriorScene.objects.find((object) => object.id === "bookcase");
+    const afterBookcase = passB.objects.find((object) => object.id === "bookcase");
+    const untouchedBefore = {
+      height: beforeBookcase?.dimensions.height,
+      depth: beforeBookcase?.dimensions.depth,
+      provenance: beforeBookcase?.dimensions.provenance,
+    };
+    const untouchedAfter = {
+      height: afterBookcase?.dimensions.height,
+      depth: afterBookcase?.dimensions.depth,
+      provenance: afterBookcase?.dimensions.provenance,
+    };
+    expect(Array.from(canonicalBytes(untouchedAfter))).toEqual(Array.from(canonicalBytes(untouchedBefore)));
   });
 
   it.each([0.999, 1.001, 1.1])("fails closed when width changes to %s m", async (width) => {

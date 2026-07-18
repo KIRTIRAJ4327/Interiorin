@@ -4,6 +4,7 @@ import {
   authorityProjection,
   geometryProjection,
   projectionDigest,
+  solverFactIds,
   type AuthorityProof,
   type ProjectionDigest,
 } from "./proof";
@@ -15,13 +16,7 @@ const policyBody = {
   version: "1.0.0" as const,
   status: "demo_authored_unendorsed" as const,
   authorizingStates: ["verified", "user_declared"] as const,
-  requiredFactIds: [
-    "table.center_x",
-    "table.width",
-    "bookcase.center_x",
-    "bookcase.width_mm",
-    "path.minimum_clearance",
-  ] as const,
+  requiredFactIds: solverFactIds,
   ruleIds: ["ordered_edge_clearance_v1"] as const,
   disclaimer:
     "Early decision support only; not survey, code, structural, or construction certification.",
@@ -83,11 +78,11 @@ function sourceForFact(scene: SpatialScene, factId: string) {
   const bookcase = scene.objects.find((object) => object.id === "bookcase");
   const path = scene.constraints.find((constraint) => constraint.id === "path-clearance");
   const sources: Record<string, string | undefined> = {
-    "table.center_x": table?.provenance.sourceLabel,
-    "table.width": table?.dimensions.provenance.sourceLabel,
-    "bookcase.center_x": bookcase?.provenance.sourceLabel,
+    "table.center_x_mm": table?.provenance.sourceLabel,
+    "table.width_mm": table?.dimensions.provenance.sourceLabel,
+    "bookcase.center_x_mm": bookcase?.provenance.sourceLabel,
     "bookcase.width_mm": (bookcase?.dimensions.widthProvenance ?? bookcase?.dimensions.provenance)?.sourceLabel,
-    "path.minimum_clearance": path?.provenance.sourceLabel,
+    "path.minimum_clearance_mm": path?.provenance.sourceLabel,
   };
   return sources[factId] ?? "Unknown source";
 }

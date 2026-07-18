@@ -3,6 +3,7 @@ import { declareObjectWidthForSession } from "./fact-authority";
 import { preparedInteriorScene } from "./prepared-scenes";
 import { buildAuthorityProof } from "./proof";
 import { buildBasicReceipt } from "./receipt";
+import { freezeSceneAction } from "./schema";
 import { commitTruthContractOutcome } from "./transaction";
 import { evaluateTruthContract } from "./truth-contract";
 
@@ -18,8 +19,9 @@ describe("minimal decision receipt", () => {
       width: 1,
       sourceLabel: "Tape measurement in receipt test",
     });
-    const proof = await buildAuthorityProof(preparedInteriorScene, declared, action, action);
-    const outcome = evaluateTruthContract(declared, action);
+    const selected = freezeSceneAction(action);
+    const proof = await buildAuthorityProof(preparedInteriorScene, declared, selected, selected);
+    const outcome = evaluateTruthContract(declared, selected);
     const committed = commitTruthContractOutcome(declared, outcome, {
       id: () => "transaction-receipt",
       now: () => new Date("2026-07-18T12:00:00.000Z"),
@@ -48,6 +50,16 @@ describe("minimal decision receipt", () => {
       sceneDiff: [{ entityId: "table", field: "position.x_mm", before: 920, after: 1100 }],
     });
     expect(receipt.factBases).toHaveLength(5);
+    expect(outcome.requestedAction).toBe(selected);
+    expect(committed.receipt.requestedAction).toBe(selected);
+    expect(receipt.requestedAction).toBe(selected);
+    expect(receipt.factBases.map((fact) => fact.factId)).toEqual([
+      "table.center_x_mm",
+      "table.width_mm",
+      "bookcase.center_x_mm",
+      "bookcase.width_mm",
+      "path.minimum_clearance_mm",
+    ]);
     expect(receipt.policyRef.hash).toMatch(/^sha256:[0-9a-f]{64}$/);
     expect(receipt.beforeCommitGeometryHash).not.toBe(receipt.afterCommitGeometryHash);
   });

@@ -142,10 +142,15 @@ function authorityCheck(
   };
 }
 
+type ClearanceAlternative = {
+  action: SceneAction;
+  check: TruthContractCheck;
+};
+
 function clearanceAlternative(
   scene: SpatialScene,
   action: Extract<SceneAction, { type: "move_object" }>,
-): { action: SceneAction; check: TruthContractCheck } | undefined {
+): ClearanceAlternative | undefined {
   const clearance = scene.constraints.find(
     (constraint) =>
       constraint.type === "clearance" &&
@@ -189,9 +194,14 @@ function clearanceAlternative(
   };
 }
 
+export type TruthContractDependencies = {
+  findClearanceAlternative?: typeof clearanceAlternative;
+};
+
 export function evaluateTruthContract(
   scene: SpatialScene,
   requestedAction: SceneAction,
+  dependencies: TruthContractDependencies = {},
 ): TruthContractOutcome {
   const professionalReviewFlags = scene.constraints.filter(
     (constraint) => constraint.requiresProfessionalReview,
@@ -294,7 +304,7 @@ export function evaluateTruthContract(
         relatedIds: [requestedAction.objectId],
       });
     }
-    const clearance = clearanceAlternative(
+    const clearance = (dependencies.findClearanceAlternative ?? clearanceAlternative)(
       scene,
       effectiveAction as Extract<SceneAction, { type: "move_object" }>,
     );
