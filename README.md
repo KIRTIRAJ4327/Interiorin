@@ -26,7 +26,7 @@ npm run dev
 
 Open `http://localhost:3000`. The proof works without credentials: turn on **Offline proof mode** before selecting **Clarify and check**.
 
-To exercise the conditional live proposal adapter, copy `.env.example` to `.env.local` and set `OPENAI_API_KEY`. The model converts language into a typed proposal only. Deterministic code owns evidence authority, geometry, alternatives, and mutation.
+To exercise the conditional live proposal adapter, copy `.env.example` to `.env.local`, set `OPENAI_API_KEY`, verify a server-side canary against `OPENAI_MODEL`, then set `ENABLE_LIVE_OPENAI=true`. The model converts language into a typed proposal only. Deterministic code owns evidence authority, geometry, alternatives, and mutation.
 
 ## Verification
 

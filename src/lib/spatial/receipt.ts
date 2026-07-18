@@ -44,6 +44,7 @@ export type BasicReceipt = {
   provider: {
     mode: ProposalProviderMode;
     model?: string;
+    requestId?: string;
     disclosure: string;
   };
   policyRef: typeof policyBody & { hash: `sha256:${string}` };

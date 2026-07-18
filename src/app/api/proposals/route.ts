@@ -30,9 +30,13 @@ export async function POST(request: Request) {
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
+  const liveEnabled = process.env.ENABLE_LIVE_OPENAI === "true";
+  if (!apiKey || !liveEnabled) {
+    const disclosure = !apiKey
+      ? "Prepared deterministic clarification; OPENAI_API_KEY is not configured."
+      : "Prepared deterministic clarification; live OpenAI is disabled until its canary is verified.";
     return NextResponse.json(
-      fallback(parsed.data.request, "Prepared deterministic clarification; OPENAI_API_KEY is not configured."),
+      fallback(parsed.data.request, disclosure),
     );
   }
 
@@ -62,6 +66,7 @@ export async function POST(request: Request) {
     const envelope: ProposalEnvelope = {
       mode: "gpt-5.6",
       model,
+      requestId: response.id,
       result: response.output_parsed,
       disclosure: "GPT-5.6 clarified intent only; deterministic code owns authority and mutation.",
     };

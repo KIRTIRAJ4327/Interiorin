@@ -27,6 +27,7 @@ export type ProposalProviderMode = "gpt-5.6" | "prepared_fallback";
 export type ProposalEnvelope = {
   mode: ProposalProviderMode;
   model?: string;
+  requestId?: string;
   result: ClarifiedProposal;
   disclosure: string;
 };

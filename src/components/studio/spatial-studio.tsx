@@ -35,6 +35,8 @@ export function SpatialStudio() {
   const [outcome, setOutcome] = useState<TruthContractOutcome>();
   const [receipt, setReceipt] = useState<BasicReceipt>();
   const [providerMode, setProviderMode] = useState<ProposalProviderMode>();
+  const [providerModel, setProviderModel] = useState<string>();
+  const [providerRequestId, setProviderRequestId] = useState<string>();
   const [providerDisclosure, setProviderDisclosure] = useState("Intent has not been sent to a model.");
   const [isClarifying, setIsClarifying] = useState(false);
   const [proof, setProof] = useState<AuthorityProof>();
@@ -73,6 +75,8 @@ export function SpatialStudio() {
       if (!response.ok) throw new Error("Proposal endpoint rejected the request");
       const envelope = (await response.json()) as ProposalEnvelope;
       setProviderMode(envelope.mode);
+      setProviderModel(envelope.model);
+      setProviderRequestId(envelope.requestId);
       setProviderDisclosure(envelope.disclosure);
       if (envelope.result.status === "needs_clarification") {
         setProviderDisclosure(envelope.result.question);
@@ -129,7 +133,8 @@ export function SpatialStudio() {
       proof,
       {
         mode: providerMode ?? "prepared_fallback",
-        model: providerMode === "gpt-5.6" ? "gpt-5.6-terra" : undefined,
+        model: providerModel,
+        requestId: providerRequestId,
         disclosure: providerDisclosure,
       },
     );
@@ -143,6 +148,8 @@ export function SpatialStudio() {
     setOutcome(undefined);
     setReceipt(undefined);
     setProviderMode(undefined);
+    setProviderModel(undefined);
+    setProviderRequestId(undefined);
     setProviderDisclosure("Intent has not been sent to a model.");
     setIsClarifying(false);
     setProof(undefined);
