@@ -623,6 +623,27 @@ input:focus-visible {
   touch-action: none;
 }
 
+.canvas-fallback {
+  min-height: 30rem;
+  display: grid;
+  place-content: center;
+  gap: var(--space-3);
+  padding: var(--space-8);
+  text-align: center;
+  background: var(--paper);
+}
+
+.canvas-fallback strong {
+  font-family: var(--font-serif), serif;
+  font-size: 1.4rem;
+}
+
+.canvas-fallback span {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
 .canvas-help {
   position: absolute;
   right: var(--space-4);
@@ -696,6 +717,50 @@ input:focus-visible {
   color: var(--muted);
   font-size: 0.7rem;
   line-height: 1.4;
+}
+
+.mode-toggle {
+  min-height: 2.75rem;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--linen);
+  cursor: pointer;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.68rem;
+}
+
+.mode-toggle span {
+  width: 1.6rem;
+  height: 0.9rem;
+  position: relative;
+  background: var(--linen);
+  border-radius: 999px;
+}
+
+.mode-toggle span::after {
+  content: "";
+  width: 0.65rem;
+  height: 0.65rem;
+  position: absolute;
+  top: 0.125rem;
+  left: 0.125rem;
+  background: var(--chalk);
+  border-radius: 50%;
+}
+
+.mode-toggle[aria-checked="true"] span {
+  background: var(--moss);
+}
+
+.mode-toggle[aria-checked="true"] span::after {
+  left: 0.825rem;
 }
 
 .decision-state {

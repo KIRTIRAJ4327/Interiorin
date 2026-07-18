@@ -38,6 +38,7 @@ describe("authority-gated spatial proof", () => {
     fireEvent.click(screen.getByRole("button", { name: /clarify and check/i }));
     expect(await screen.findByText("Geometry is computable. Authority is not.")).toBeInTheDocument();
     expect(screen.getByText("Prepared typed proposal")).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent("18 cm");
 
     fireEvent.click(screen.getByRole("button", { name: /record measurement/i }));
     expect(await screen.findByText("Only authority changed.")).toBeInTheDocument();

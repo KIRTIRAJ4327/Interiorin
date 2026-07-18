@@ -126,26 +126,20 @@ export function transactionProjection(sceneId: string, action: SceneAction) {
 }
 
 export function authorityProjection(scene: SpatialScene) {
-  return scene.objects
-    .flatMap((object) => [
-      {
-        id: `${object.id}.identity`,
-        factId: `${object.id}.identity`,
-        authority: object.provenance.authority,
-      },
-      {
-        id: `${object.id}.dimensions`,
-        factId: `${object.id}.dimensions`,
-        authority: object.dimensions.provenance.authority,
-      },
-    ])
-    .concat(
-      scene.constraints.map((constraint) => ({
-        id: `constraint.${constraint.id}`,
-        factId: `constraint.${constraint.id}`,
-        authority: constraint.provenance.authority,
-      })),
-    );
+  const table = scene.objects.find((object) => object.id === "table");
+  const bookcase = scene.objects.find((object) => object.id === "bookcase");
+  const path = scene.constraints.find((constraint) => constraint.id === "path-clearance");
+  if (!table || !bookcase || !path) {
+    throw new Error("The prepared solver dependency graph is incomplete.");
+  }
+
+  return [
+    { id: "table.center_x", factId: "table.center_x", authority: table.provenance.authority },
+    { id: "table.width", factId: "table.width", authority: table.dimensions.provenance.authority },
+    { id: "bookcase.center_x", factId: "bookcase.center_x", authority: bookcase.provenance.authority },
+    { id: "bookcase.dimensions", factId: "bookcase.dimensions", authority: bookcase.dimensions.provenance.authority },
+    { id: "path.minimum_clearance", factId: "path.minimum_clearance", authority: path.provenance.authority },
+  ];
 }
 
 function authorityDiff(before: ReturnType<typeof authorityProjection>, after: ReturnType<typeof authorityProjection>) {

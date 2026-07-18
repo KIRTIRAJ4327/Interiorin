@@ -10,7 +10,7 @@ import {
   type ProposalEnvelope,
 } from "@/lib/ai/proposal";
 
-const defaultModel = "gpt-5.6";
+const defaultModel = "gpt-5.6-terra";
 
 function fallback(request: string, disclosure: string): ProposalEnvelope {
   return {
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       text: {
         format: zodTextFormat(clarifiedProposalSchema, "spatial_proposal"),
       },
-    });
+    }, { signal: AbortSignal.timeout(6000) });
 
     if (!response.output_parsed) {
       return NextResponse.json(

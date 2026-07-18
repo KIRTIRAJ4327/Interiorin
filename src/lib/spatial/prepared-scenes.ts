@@ -14,6 +14,13 @@ const observed = {
   sourceLabel: "Visible in supplied room capture",
 };
 
+const preparedVerified = {
+  evidence: "prepared_demo" as const,
+  confidence: "high" as const,
+  authority: "verified" as const,
+  sourceLabel: "Verified prepared fixture geometry",
+};
+
 const inferred = {
   evidence: "inferred" as const,
   confidence: "low" as const,
@@ -90,10 +97,10 @@ export const preparedInteriorScene: SpatialScene = spatialSceneSchema.parse({
       category: "table",
       assetId: "table-oval-oak",
       transform: transform(0.92, 0, 0),
-      dimensions: { width: 1.4, height: 0.75, depth: 0.9, provenance: entered },
+      dimensions: { width: 1.4, height: 0.75, depth: 0.9, provenance: preparedVerified },
       materialIds: ["oak-mid"],
       protected: false,
-      provenance: entered,
+      provenance: preparedVerified,
     },
     {
       id: "bookcase",
@@ -104,7 +111,7 @@ export const preparedInteriorScene: SpatialScene = spatialSceneSchema.parse({
       dimensions: { width: 1, height: 2, depth: 0.4, provenance: observed },
       materialIds: ["walnut-aged"],
       protected: true,
-      provenance: observed,
+      provenance: preparedVerified,
     },
     {
       id: "pendant",

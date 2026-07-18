@@ -2,6 +2,7 @@
 
 import { ContactShadows, Grid, OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
+import { Component, type ErrorInfo, type ReactNode } from "react";
 import type { SpatialScene, Vector3 } from "@/lib/spatial/schema";
 
 type SceneCanvasProps = {
@@ -90,10 +91,39 @@ function Room({ scene, previewPosition }: SceneCanvasProps) {
 export function SceneCanvas(props: SceneCanvasProps) {
   return (
     <div className="scene-canvas" aria-label="Interactive three-dimensional view of the prepared dining room">
-      <Canvas shadows camera={{ position: [4.6, 3.8, 5.8], fov: 38 }} dpr={[1, 1.5]}>
-        <Room {...props} />
-      </Canvas>
+      <SceneErrorBoundary>
+        <Canvas shadows camera={{ position: [4.6, 3.8, 5.8], fov: 38 }} dpr={[1, 1.5]} fallback={<CanvasFallback />}>
+          <Room {...props} />
+        </Canvas>
+      </SceneErrorBoundary>
       <p className="canvas-help">Drag to orbit · Scroll to inspect scale</p>
     </div>
   );
+}
+
+function CanvasFallback() {
+  return (
+    <div className="canvas-fallback" role="img" aria-label="Numeric fallback for the prepared dining room">
+      <strong>3D unavailable · numeric proof remains active</strong>
+      <span>Table centre 920 mm</span>
+      <span>Bookcase centre 3200 mm</span>
+      <span>Required edge clearance 900 mm</span>
+    </div>
+  );
+}
+
+class SceneErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("The 3D scene failed; numeric proof remains available.", error, info.componentStack);
+  }
+
+  render() {
+    return this.state.failed ? <CanvasFallback /> : this.props.children;
+  }
 }

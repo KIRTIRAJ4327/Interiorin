@@ -37,6 +37,7 @@ export function SpatialStudio() {
   const [providerDisclosure, setProviderDisclosure] = useState("Intent has not been sent to a model.");
   const [isClarifying, setIsClarifying] = useState(false);
   const [proof, setProof] = useState<AuthorityProof>();
+  const [forceOffline, setForceOffline] = useState(false);
   const bookcase = scene.objects.find((object) => object.id === "bookcase");
   const previewPosition = outcome?.decision === "limited" && outcome.effectiveAction?.type === "move_object"
     ? outcome.effectiveAction.position
@@ -45,6 +46,17 @@ export function SpatialStudio() {
   async function runCheck() {
     setIsClarifying(true);
     let action = demoAction;
+    if (forceOffline) {
+      const prepared = preparedProposalFallback(demoRequest);
+      setProviderMode("prepared_fallback");
+      setProviderDisclosure("Presenter selected offline deterministic parser; no model call was attempted.");
+      if (prepared.status === "resolved") action = proposalToSceneAction(scene, prepared);
+      const next = evaluateTruthContract(scene, action);
+      setOutcome(next);
+      setStage(next.decision === "confirmation_required" ? "evidence_required" : "limited");
+      setIsClarifying(false);
+      return;
+    }
     try {
       const response = await fetch("/api/proposals", {
         method: "POST",
@@ -110,6 +122,7 @@ export function SpatialStudio() {
     setProviderDisclosure("Intent has not been sent to a model.");
     setIsClarifying(false);
     setProof(undefined);
+    setForceOffline(false);
     setStage("ready");
   }
 
@@ -128,7 +141,7 @@ export function SpatialStudio() {
           <p className="rail-intro">Geometry is visible. Authority decides whether it may support a fit claim.</p>
           <div className="fact-list">
             <Fact icon={<Ruler aria-hidden="true" size={17} />} title="90 cm access path" detail="Exact session constraint" authority="User declared" state="user_declared" />
-            <Fact icon={<LockKeyhole aria-hidden="true" size={17} />} title="Heirloom bookcase" detail="1.00 × 2.00 × 0.40 m" authority={bookcase ? authorityLabel[bookcase.dimensions.provenance.authority] : "Unknown"} state={bookcase?.dimensions.provenance.authority} />
+            <Fact icon={<LockKeyhole aria-hidden="true" size={17} />} title="Heirloom bookcase" detail={`${bookcase?.dimensions.provenance.authority === "user_declared" ? "Homeowner attested" : "Visual estimate"} · 1.00 × 2.00 × 0.40 m`} authority={bookcase ? authorityLabel[bookcase.dimensions.provenance.authority] : "Unknown"} state={bookcase?.dimensions.provenance.authority} />
             <Fact icon={<Check aria-hidden="true" size={17} />} title="Bookcase lock" detail="Retain and protect" authority="User declared" state="user_declared" />
           </div>
           <div className="authority-rule"><p>AUTHORITY RULE 01</p><strong>Unverified facts may block. They never authorize fit.</strong></div>
@@ -148,6 +161,7 @@ export function SpatialStudio() {
           <div className="proposal-card">
             <div className="proposal-source"><Sparkles aria-hidden="true" size={15} />{providerMode === "gpt-5.6" ? "GPT-5.6 typed proposal" : providerMode === "prepared_fallback" ? "Prepared typed proposal" : "Proposal awaiting check"}</div>
             <p>{demoRequest}</p><code>move(table_01, x: +0.40m)</code><small>{providerDisclosure}</small>
+            <button className="mode-toggle" type="button" role="switch" aria-checked={forceOffline} onClick={() => setForceOffline((current) => !current)}><span aria-hidden="true" />Offline proof mode {forceOffline ? "on" : "off"}</button>
           </div>
 
           {stage === "ready" ? <DecisionState kicker="READY TO CHECK" title="No scene mutation has been attempted." body="Clarify the request, then run the exact proposal against every supporting fact and constraint."><ActionButton onClick={runCheck} disabled={isClarifying}>{isClarifying ? "Clarifying request…" : "Clarify and check"}</ActionButton></DecisionState> : null}
