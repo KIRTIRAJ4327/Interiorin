@@ -21,9 +21,9 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Interiorin — spatial design with the space in view",
+  title: "Interiorin — evidence-aware spatial decisions",
   description:
-    "Explore grounded interior and exterior design directions, refine known scene elements, and compare decisions before committing.",
+    "Check fit-sensitive interior changes against the authority of their supporting spatial facts before committing.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
