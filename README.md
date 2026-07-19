@@ -86,10 +86,11 @@ npm run lint
 npm run typecheck
 npm test
 npm run test:e2e
+npm run test:e2e:production
 npm run build
 ```
 
-Current implementation gate: **28 test files / 83 tests**, zero-warning lint, strict TypeScript, optimized Next.js production build, paired Chromium intake→refinement→comparison→refresh→review→JSON→print journey, desktop/Pixel 7 checks, reduced-motion rules, visual inspection, and high-confidence secret scans.
+Current implementation gate: **28 test files / 84 tests**, zero-warning lint, strict TypeScript, optimized Next.js production build, 12 passed / 8 intentionally skipped repository-wide desktop/mobile browser cases, paired production smoke on `interiorin-beta.vercel.app`, reduced-motion rules, visual inspection, and high-confidence secret scans. Set `PLAYWRIGHT_PRODUCTION_URL` to smoke another deployment; the default is the production alias.
 
 The current task’s Codex Session ID is `019f7391-31b1-7e73-9e15-d887f7dc38a0`.
 
