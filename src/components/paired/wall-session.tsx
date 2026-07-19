@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Check, CircleAlert, Download, Link2, Printer, Radio, ScanLine, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
@@ -12,13 +12,23 @@ import { validateScene } from "@/lib/spatial/validation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type PairedVersion = PairedCanonicalState["versions"][number];
+const subscribeToStaticStorage = () => () => {};
 
 export function WallSession({ sessionId }: { sessionId: string }) {
-  const [session] = useState<SessionCreateEnvelope | null>(() => {
-    if (typeof window === "undefined") return null;
-    const raw = sessionStorage.getItem(`interiorin:created:${sessionId}`);
-    return raw ? JSON.parse(raw) as SessionCreateEnvelope : null;
-  });
+  const storedSession = useSyncExternalStore(
+    subscribeToStaticStorage,
+    () => sessionStorage.getItem(`interiorin:created:${sessionId}`) ?? "",
+    () => "",
+  );
+  const storedMode = useSyncExternalStore(
+    subscribeToStaticStorage,
+    () => localStorage.getItem(`interiorin:mode:${sessionId}`) as "supabase" | "same_device" | null,
+    () => null,
+  );
+  const session = useMemo(() => {
+    if (!storedSession) return null;
+    try { return JSON.parse(storedSession) as SessionCreateEnvelope; } catch { return null; }
+  }, [storedSession]);
   const [connection, setConnection] = useState<"connecting" | "waiting" | "paired" | "error">("connecting");
   const [events, setEvents] = useState<StudioEvent[]>([]);
   const [message, setMessage] = useState("Opening the private session channel…");
@@ -32,7 +42,7 @@ export function WallSession({ sessionId }: { sessionId: string }) {
   const initialModeRecoveredRef = useRef(false);
   const transportRef = useRef<SessionTransport | null>(null);
 
-  const mode = useMemo(() => session?.mode ?? (typeof window === "undefined" ? "same_device" : (localStorage.getItem(`interiorin:mode:${sessionId}`) as "supabase" | "same_device" | null) ?? "same_device"), [session, sessionId]);
+  const mode = useMemo(() => session?.mode ?? storedMode ?? "same_device", [session, storedMode]);
 
   useEffect(() => {
     const transport = createSessionTransport(mode, sessionId, "wall");

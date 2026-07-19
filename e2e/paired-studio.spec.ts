@@ -15,7 +15,8 @@ test("same-device QR never pretends a physical phone is synchronized", async ({ 
   const phone = await physicalPhone.newPage();
   await phone.goto(joinUrl);
   await expect(phone.getByRole("heading", { name: "This phone could not join." })).toBeVisible();
-  await expect(phone.getByRole("alert")).toContainText("only connects another window on the laptop");
+  const disclosureAlert = phone.getByRole("alert").filter({ hasText: "only connects another window on the laptop" });
+  await expect(disclosureAlert).toContainText("only connects another window on the laptop");
   await physicalPhone.close();
 });
 

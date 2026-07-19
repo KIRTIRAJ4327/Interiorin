@@ -2,6 +2,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
+  // Requires live Supabase and the deployed origin; runs only under
+  // playwright.production.config.ts (npm run test:e2e:production).
+  testIgnore: ["**/production-real-device.spec.ts"],
   timeout: 45_000,
   expect: { timeout: 8_000 },
   fullyParallel: false,

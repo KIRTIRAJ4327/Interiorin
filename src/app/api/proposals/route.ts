@@ -29,8 +29,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  const liveEnabled = process.env.ENABLE_LIVE_OPENAI === "true";
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  const liveEnabled = process.env.ENABLE_LIVE_OPENAI?.trim() === "true";
   const canaryResponseId = process.env.OPENAI_CANARY_RESPONSE_ID?.trim();
   if (!apiKey || !liveEnabled || !canaryResponseId) {
     const disclosure = !apiKey
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const model = process.env.OPENAI_MODEL ?? defaultModel;
+  const model = process.env.OPENAI_MODEL?.trim() || defaultModel;
   if (model !== defaultModel) {
     return NextResponse.json(
       fallback(parsed.data.request, `Prepared deterministic clarification; unsupported live model ${model}.`),

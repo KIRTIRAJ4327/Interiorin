@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.json({
-    liveSupabase: process.env.NEXT_PUBLIC_ENABLE_LIVE_SUPABASE === "true",
+    liveSupabase: process.env.NEXT_PUBLIC_ENABLE_LIVE_SUPABASE?.trim() === "true",
     supabaseUrl: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()),
     publishableKey: Boolean(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim()),
     secretKey: Boolean(process.env.SUPABASE_SECRET_KEY?.trim()),

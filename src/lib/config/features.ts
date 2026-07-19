@@ -1,5 +1,5 @@
 const enabled = (value: string | undefined, fallback = false) =>
-  value === undefined ? fallback : value === "true";
+  value === undefined ? fallback : value.trim() === "true";
 
 export const productFeatures = Object.freeze({
   pairedExperience: enabled(process.env.NEXT_PUBLIC_ENABLE_PAIRED_EXPERIENCE, true),

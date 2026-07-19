@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   const parsed = refineRequestSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Refinement context failed validation." }, { status: 400 });
   const apiKey = process.env.OPENAI_API_KEY?.trim();
-  const liveEnabled = process.env.ENABLE_LIVE_OPENAI === "true";
+  const liveEnabled = process.env.ENABLE_LIVE_OPENAI?.trim() === "true";
   const canary = process.env.OPENAI_CANARY_RESPONSE_ID?.trim();
   const model = process.env.OPENAI_MODEL?.trim() || exactModel;
   if (!apiKey || !liveEnabled || !canary || !/^resp_[A-Za-z0-9_-]+$/.test(canary) || model !== exactModel) {
