@@ -1,6 +1,24 @@
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
+test("same-device QR never pretends a physical phone is synchronized", async ({ page, browser }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "The isolated-device fallback proof runs once.");
+  await page.goto("/wall");
+  await page.getByRole("button", { name: "Create Studio Wall" }).click();
+  await expect(page).toHaveURL(/\/wall\/[0-9a-f-]+$/);
+  const storedSession = await page.evaluate(() => {
+    const sessionId = location.pathname.split("/").at(-1);
+    return sessionStorage.getItem(`interiorin:created:${sessionId}`);
+  });
+  const joinUrl = (JSON.parse(storedSession!) as { joinUrl: string }).joinUrl;
+  const physicalPhone = await browser.newContext();
+  const phone = await physicalPhone.newPage();
+  await phone.goto(joinUrl);
+  await expect(phone.getByRole("heading", { name: "This phone could not join." })).toBeVisible();
+  await expect(phone.getByRole("alert")).toContainText("only connects another window on the laptop");
+  await physicalPhone.close();
+});
+
 test("same-device pairing is disclosed and the wall observes one controller", async ({ page, context }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium", "The paired two-page proof runs once; mobile layout has a separate check.");
   await page.goto("/wall");
@@ -22,7 +40,7 @@ test("same-device pairing is disclosed and the wall observes one controller", as
   await expect(phone).not.toHaveURL(/token=/);
 
   await expect(page.getByText("Phone paired", { exact: true })).toBeVisible();
-  await expect(page.getByText(/Phone controller (authenticated|recovered)/)).toBeVisible();
+  await expect(page.getByText(/Phone (connected|controller authenticated|controller recovered)/)).toBeVisible();
   await expect(page.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth)).resolves.toBe(true);
   await page.screenshot({ path: testInfo.outputPath("paired-wall.png"), fullPage: true });
   await phone.screenshot({ path: testInfo.outputPath("paired-phone.png"), fullPage: true });

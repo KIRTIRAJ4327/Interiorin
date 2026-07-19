@@ -50,7 +50,7 @@ export function WallSession({ sessionId }: { sessionId: string }) {
       }
       const paired = snapshot.members.some((member) => member.role === "controller");
       setConnection(paired ? "paired" : "waiting");
-      setMessage(paired ? "Phone controller recovered and authenticated." : "Channel ready. Scan the code with the homeowner’s phone.");
+      setMessage(wallProgressMessage(nextCanonical, paired));
     }
     const unsubscribe = transport.subscribe((event) => {
       if (!mounted) return;
@@ -180,8 +180,9 @@ export function WallSession({ sessionId }: { sessionId: string }) {
           <ol>
             <TraceStep done label="Wall authenticated" detail="Anonymous authenticated identity" />
             <TraceStep done={connection !== "connecting" && connection !== "error"} label="Private channel ready" detail={mode === "supabase" ? "Membership-authorized Realtime" : "Same-origin local channel"} />
-            <TraceStep done={joined} active={!joined} label="Controller joined" detail="Single-use token · one controller" />
-            <TraceStep done={false} label="Room intake" detail="Waiting for photo and declared dimensions" />
+            <TraceStep done={joined} active={!joined} label="Controller joined" detail={mode === "supabase" ? "Authenticated phone · one controller" : "Same-browser fallback · one controller"} />
+            <TraceStep done={Boolean(canonical.source)} active={joined && !canonical.source} label="Room intake" detail={canonical.source ? `${canonical.source.dimensions.widthM.toFixed(1)} × ${canonical.source.dimensions.depthM.toFixed(1)} × ${canonical.source.dimensions.heightM.toFixed(1)} m declared · photo secured` : "Waiting for photo and declared dimensions"} />
+            <TraceStep done={Boolean(canonical.brief)} active={Boolean(canonical.source) && !canonical.brief} label="Homeowner intent" detail={canonical.brief ? "Confirmed brief synchronized" : "Waiting for the phone brief"} />
           </ol>
           <div className="event-ribbon" aria-live="polite">
             <span>{events.length} verified event{events.length === 1 ? "" : "s"}</span>
@@ -191,6 +192,14 @@ export function WallSession({ sessionId }: { sessionId: string }) {
       </section>}
     </main>
   );
+}
+
+function wallProgressMessage(canonical: PairedCanonicalState, paired: boolean) {
+  if (!paired) return "Channel ready. Scan the code with the homeowner’s phone.";
+  if (!canonical.source) return "Phone connected. Continue with the room photo and declared dimensions.";
+  if (!canonical.brief) return "Room intake synchronized. Continue with the homeowner intent on the phone.";
+  if (!canonical.options.length) return "Brief confirmed. Building three checked directions.";
+  return "Phone and Studio Wall are synchronized.";
 }
 
 function WallReveal({ canonical, sourceUrl, revealUrl }: { canonical: PairedCanonicalState; sourceUrl?: string; revealUrl?: string }) {

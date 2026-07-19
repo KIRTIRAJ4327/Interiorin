@@ -47,6 +47,9 @@ export function PhoneController({ sessionId, token, requestedMode }: { sessionId
     async function pair() {
       try {
         const storedMode = localStorage.getItem(`interiorin:mode:${sessionId}`) as "supabase" | "same_device" | null;
+        if (requestedMode === "same_device" && storedMode !== "same_device") {
+          throw new Error("This fallback link only connects another window on the laptop. Start a verified real-device wall before scanning with a physical phone.");
+        }
         let paired: SessionJoinEnvelope;
         if (!token && storedMode && localStorage.getItem(`interiorin:joined:${sessionId}`)) {
           paired = { mode: storedMode, sessionId, role: "controller", disclosure: storedMode === "same_device" ? "Same-device demo mode: data remains in this browser origin." : "Private paired session reconnected." };
