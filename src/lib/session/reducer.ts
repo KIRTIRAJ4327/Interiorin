@@ -81,11 +81,15 @@ export function applyStudioCommand(current: unknown, command: StudioCommand, ses
     const option = state.options.find((candidate) => candidate.id === state.selectedOptionId);
     if (!option) throw new Error("Select a canonical direction before saving a version.");
     const version = { id: command.idempotencyKey, name: command.name, optionId: option.id, scene: structuredClone(option.scene), createdAt: command.clientTimestamp };
-    return pairedCanonicalStateSchema.parse({ ...state, versions: [...state.versions, version] });
+    return pairedCanonicalStateSchema.parse({ ...state, versions: [...state.versions, version], selectedReviewVersionId: state.selectedReviewVersionId ?? version.id });
   }
   if (command.type === "select_comparison") {
     if (command.firstVersionId === command.secondVersionId || !state.versions.some((version) => version.id === command.firstVersionId) || !state.versions.some((version) => version.id === command.secondVersionId)) throw new Error("Choose two different saved versions from this session.");
     return pairedCanonicalStateSchema.parse({ ...state, comparison: { firstVersionId: command.firstVersionId, secondVersionId: command.secondVersionId } });
+  }
+  if (command.type === "select_review_version") {
+    if (!state.versions.some((version) => version.id === command.versionId)) throw new Error("Choose a saved canonical version for architect review.");
+    return pairedCanonicalStateSchema.parse({ ...state, selectedReviewVersionId: command.versionId });
   }
   if (command.type === "end_session") return pairedCanonicalStateSchema.parse({ ...state, stage: "ended" });
   return state;

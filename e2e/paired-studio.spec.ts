@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 test("same-device pairing is disclosed and the wall observes one controller", async ({ page, context }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium", "The paired two-page proof runs once; mobile layout has a separate check.");
@@ -88,7 +89,7 @@ test("phone intake generates the same canonical options on the Studio Wall", asy
   const beforeX = await tableX();
   await phone.getByRole("textbox", { name: "Version name" }).fill("Conversation base");
   await phone.getByRole("button", { name: "Save version" }).click();
-  await expect(phone.getByText("Conversation base", { exact: true })).toBeVisible();
+  await expect(phone.locator(".phone-versions li").filter({ hasText: "Conversation base" })).toBeVisible();
   await phone.getByRole("textbox", { name: "Refinement request" }).fill("Move the table right 30 cm");
   await phone.getByRole("button", { name: "Check proposed change" }).click();
   await expect(phone.getByRole("heading", { name: "Approve only the checked action." })).toBeVisible();
@@ -117,6 +118,26 @@ test("phone intake generates the same canonical options on the Studio Wall", asy
   await phone.getByRole("button", { name: "Check proposed change" }).click();
   await expect(phone.locator(".phone-proposal[data-status='clarification']")).toContainText("Name a visible object");
   expect(await tableX()).toBeCloseTo(committedX, 5);
+  await phone.locator(".phone-review-select button").filter({ hasText: "Table shifted" }).click();
+  await expect(page.locator("#wall-options-title")).toHaveText("Architect review");
+  await expect(page.locator(".review-sheet")).toContainText("not construction documentation");
+  await expect(page.getByRole("heading", { name: "Object schedule" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Decision receipts" })).toBeVisible();
+  await expect(page.locator(".review-sheet")).toContainText("outside the entered space envelope");
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download structured JSON" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toContain("table-shifted-concept-review.json");
+  const downloadedPath = await download.path();
+  const handoff = JSON.parse(await readFile(downloadedPath!, "utf8")) as { packageType: string; selectedVersion: { name: string; scene: { objects: unknown[] } }; objectSchedule: unknown[]; disclosure: string };
+  expect(handoff.packageType).toBe("architect_concept_review");
+  expect(handoff.selectedVersion.name).toBe("Table shifted");
+  expect(handoff.objectSchedule).toHaveLength(handoff.selectedVersion.scene.objects.length);
+  expect(handoff.disclosure).toContain("not construction documentation");
+  await page.emulateMedia({ media: "print" });
+  await expect(page.locator(".wall-header")).toBeHidden();
+  await expect(page.locator(".review-sheet")).toBeVisible();
+  await page.emulateMedia({ media: "screen" });
   await page.screenshot({ path: testInfo.outputPath("paired-generated-wall.png"), fullPage: true });
   await phone.screenshot({ path: testInfo.outputPath("paired-generated-phone.png"), fullPage: true });
 });

@@ -212,6 +212,13 @@ export function PhoneController({ sessionId, token, requestedMode }: { sessionId
     finally { setBusy(""); }
   }
 
+  async function selectReviewVersion(versionId: string) {
+    setBusy("Selecting architect review version…"); setError("");
+    try { await send({ type: "select_review_version", versionId }); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Review version could not be selected."); }
+    finally { setBusy(""); }
+  }
+
   if (status === "joining") return <PhoneStatus icon={<LoaderCircle className="spin" />} title="Pairing securely…" detail="Authenticating this phone and claiming the one-time controller seat." />;
   if (status === "error") return <PhoneStatus icon={<LockKeyhole />} title="This phone could not join." detail={error} error />;
   const currentStage = state.stage === "space" ? "Space" : state.stage === "brief" ? "Brief" : state.stage === "options" ? "Options" : state.stage === "approve" ? "Approve" : "Refine";
@@ -244,12 +251,17 @@ export function PhoneController({ sessionId, token, requestedMode }: { sessionId
       {currentProposal ? <article className="phone-proposal" data-status={currentProposal.status}><p className="eyebrow">{currentProposal.interpretation.mode.replaceAll("_", " ")} · {currentProposal.interpretation.latencyMs} ms</p><h2>{currentProposal.interpretation.summary ?? currentProposal.interpretation.clarification}</h2>{currentProposal.receipt ? <><p><strong>{currentProposal.receipt.status === "accepted" ? "Deterministic checks passed" : "Change rejected"}</strong>{currentProposal.receipt.message}</p>{currentProposal.receipt.warnings.map((warning) => <small key={warning}>{warning}</small>)}</> : null}<p>{currentProposal.interpretation.disclosure}</p>{currentProposal.status === "awaiting_approval" ? <div><button onClick={() => void decideProposal(currentProposal.id, false)}>Reject</button><button onClick={() => void decideProposal(currentProposal.id, true)} disabled={Boolean(busy)}>Approve checked action</button></div> : <strong className="proposal-status">{currentProposal.status.replaceAll("_", " ")}</strong>}</article> : null}
       {error ? <p className="paired-error" role="alert">{error}</p> : null}
     </section> : null}
-    {state.stage === "refine" || state.stage === "approve" ? <VersionLedger state={state} versionName={versionName} setVersionName={setVersionName} comparison={comparison} setComparison={setComparison} busy={Boolean(busy)} onSave={saveVersion} onCompare={showComparison} /> : null}
+    {state.stage === "refine" || state.stage === "approve" ? <><VersionLedger state={state} versionName={versionName} setVersionName={setVersionName} comparison={comparison} setComparison={setComparison} busy={Boolean(busy)} onSave={saveVersion} onCompare={showComparison} /><ReviewSelection state={state} busy={Boolean(busy)} onSelect={selectReviewVersion} /></> : null}
   </main>;
 }
 
 function VersionLedger({ state, versionName, setVersionName, comparison, setComparison, busy, onSave, onCompare }: { state: PairedCanonicalState; versionName: string; setVersionName: (value: string) => void; comparison: { firstVersionId: string; secondVersionId: string }; setComparison: (value: { firstVersionId: string; secondVersionId: string }) => void; busy: boolean; onSave: () => Promise<void>; onCompare: () => Promise<void> }) {
   return <section className="phone-versions" aria-labelledby="versions-title"><p className="eyebrow">Version ledger · {state.versions.length}/12</p><h2 id="versions-title">Save the room, then compare honestly.</h2><div className="phone-version-save"><label>Version name<input maxLength={40} value={versionName} onChange={(event) => setVersionName(event.target.value)} /></label><button type="button" onClick={() => void onSave()} disabled={busy || state.versions.length >= 12}><BookmarkPlus aria-hidden="true" /> Save version</button></div>{state.versions.length ? <ol>{state.versions.map((version) => <li key={version.id}><span><strong>{version.name}</strong><small>{new Date(version.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · canonical scene</small></span><Check aria-label="Saved" /></li>)}</ol> : <p className="phase-note">Save before and after a checked change to create an exact comparison.</p>}{state.versions.length >= 2 ? <div className="phone-compare-controls"><label>First version<select value={comparison.firstVersionId} onChange={(event) => setComparison({ ...comparison, firstVersionId: event.target.value })}><option value="">Choose version</option>{state.versions.map((version) => <option key={version.id} value={version.id}>{version.name}</option>)}</select></label><label>Second version<select value={comparison.secondVersionId} onChange={(event) => setComparison({ ...comparison, secondVersionId: event.target.value })}><option value="">Choose version</option>{state.versions.map((version) => <option key={version.id} value={version.id}>{version.name}</option>)}</select></label><button type="button" onClick={() => void onCompare()} disabled={busy}><Columns2 aria-hidden="true" /> Compare on wall</button></div> : null}</section>;
+}
+
+function ReviewSelection({ state, busy, onSelect }: { state: PairedCanonicalState; busy: boolean; onSelect: (versionId: string) => Promise<void> }) {
+  if (!state.versions.length) return null;
+  return <section className="phone-review-select" aria-labelledby="review-select-title"><p className="eyebrow">Architect concept review</p><h2 id="review-select-title">Choose the direction to hand off.</h2><p>One saved canonical version becomes the review sheet and structured JSON source.</p><div>{state.versions.map((version) => <button type="button" key={version.id} aria-pressed={state.selectedReviewVersionId === version.id} disabled={busy} onClick={() => void onSelect(version.id)}><span><strong>{version.name}</strong><small>{state.selectedReviewVersionId === version.id ? "Selected for review" : "Select this saved scene"}</small></span>{state.selectedReviewVersionId === version.id ? <Check aria-hidden="true" /> : <ChevronRight aria-hidden="true" />}</button>)}</div></section>;
 }
 
 function Disclosure({ join }: { join: SessionJoinEnvelope | null }) { return <p className="paired-notice"><ShieldCheck aria-hidden="true" /> {join?.disclosure}</p>; }

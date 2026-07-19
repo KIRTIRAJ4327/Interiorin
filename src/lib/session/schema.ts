@@ -65,6 +65,7 @@ export const pairedCanonicalStateSchema = z.object({
   receipts: z.array(pairedProposalSchema).max(20).default([]),
   versions: z.array(pairedVersionSchema).max(12).default([]),
   comparison: z.object({ firstVersionId: z.string(), secondVersionId: z.string() }).optional(),
+  selectedReviewVersionId: z.string().optional(),
 });
 
 export type PairedCanonicalState = z.infer<typeof pairedCanonicalStateSchema>;

@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Check, CircleAlert, Link2, Radio, ScanLine, ShieldCheck } from "lucide-react";
+import { Check, CircleAlert, Download, Link2, Printer, Radio, ScanLine, ShieldCheck } from "lucide-react";
 import { pairedCanonicalStateSchema, type PairedCanonicalState, type SessionCreateEnvelope, type StudioEvent } from "@/lib/session/schema";
 import { createSessionTransport } from "@/lib/session/transport";
 import { StudioModel, type StudioModelHandle } from "@/components/product/studio-model";
 import { compareScenes } from "@/lib/spatial/diff";
+import { validateScene } from "@/lib/spatial/validation";
 
 type PairedVersion = PairedCanonicalState["versions"][number];
 
@@ -21,11 +22,12 @@ export function WallSession({ sessionId }: { sessionId: string }) {
   const [events, setEvents] = useState<StudioEvent[]>([]);
   const [message, setMessage] = useState("Opening the private session channel…");
   const [canonical, setCanonical] = useState<PairedCanonicalState>(() => pairedCanonicalStateSchema.parse({}));
-  const [wallMode, setWallMode] = useState<"explore" | "model" | "compare">("explore");
+  const [wallMode, setWallMode] = useState<"explore" | "model" | "compare" | "review">("explore");
   const [snapshotUrls, setSnapshotUrls] = useState<Record<string, string>>({});
   const [captureFailures, setCaptureFailures] = useState<Set<string>>(() => new Set());
   const [captureVersionId, setCaptureVersionId] = useState("");
   const snapshotUrlsRef = useRef<Record<string, string>>({});
+  const initialModeRecoveredRef = useRef(false);
 
   const mode = useMemo(() => session?.mode ?? (typeof window === "undefined" ? "same_device" : (localStorage.getItem(`interiorin:mode:${sessionId}`) as "supabase" | "same_device" | null) ?? "same_device"), [session, sessionId]);
 
@@ -38,7 +40,10 @@ export function WallSession({ sessionId }: { sessionId: string }) {
       setEvents(snapshot.events);
       const nextCanonical = pairedCanonicalStateSchema.parse(snapshot.canonicalState);
       setCanonical(nextCanonical);
-      if (nextCanonical.comparison) setWallMode("compare");
+      if (!initialModeRecoveredRef.current) {
+        initialModeRecoveredRef.current = true;
+        if (nextCanonical.comparison) setWallMode("compare");
+      }
       const paired = snapshot.members.some((member) => member.role === "controller");
       setConnection(paired ? "paired" : "waiting");
       setMessage(paired ? "Phone controller recovered and authenticated." : "Channel ready. Scan the code with the homeowner’s phone.");
@@ -50,6 +55,8 @@ export function WallSession({ sessionId }: { sessionId: string }) {
         setConnection("paired");
         setMessage("Phone controller authenticated. The wall is ready for room intake.");
       }
+      if (event.eventType === "review_version_selected") setWallMode("review");
+      if (event.eventType === "comparison_selected") setWallMode("compare");
       void recover();
     });
     void transport.connect().then(async () => {
@@ -68,16 +75,18 @@ export function WallSession({ sessionId }: { sessionId: string }) {
   const selectedOption = canonical.options.find((option) => option.id === canonical.selectedOptionId) ?? canonical.options[0];
   const activeProposal = canonical.proposals.at(-1);
   const comparisonVersions = useMemo(() => canonical.comparison ? [canonical.versions.find((version) => version.id === canonical.comparison?.firstVersionId), canonical.versions.find((version) => version.id === canonical.comparison?.secondVersionId)].filter((version): version is PairedVersion => Boolean(version)) : [], [canonical.comparison, canonical.versions]);
+  const reviewVersion = canonical.versions.find((version) => version.id === canonical.selectedReviewVersionId) ?? canonical.versions.at(-1);
+  const snapshotCandidates = useMemo(() => [...comparisonVersions, ...(reviewVersion ? [reviewVersion] : [])].filter((version, index, versions) => versions.findIndex((candidate) => candidate.id === version.id) === index), [comparisonVersions, reviewVersion]);
   const captureVersion = canonical.versions.find((version) => version.id === captureVersionId);
 
   useEffect(() => () => { Object.values(snapshotUrlsRef.current).forEach((url) => URL.revokeObjectURL(url)); }, []);
   useEffect(() => {
     if (captureVersionId) return;
-    const next = comparisonVersions.find((version) => !snapshotUrls[version.id] && !captureFailures.has(version.id));
+    const next = snapshotCandidates.find((version) => !snapshotUrls[version.id] && !captureFailures.has(version.id));
     if (!next) return;
     const timer = window.setTimeout(() => setCaptureVersionId(next.id), 0);
     return () => window.clearTimeout(timer);
-  }, [captureFailures, captureVersionId, comparisonVersions, snapshotUrls]);
+  }, [captureFailures, captureVersionId, snapshotCandidates, snapshotUrls]);
 
   function storeSnapshot(versionId: string, blob: Blob | null) {
     if (!blob) setCaptureFailures((current) => new Set(current).add(versionId));
@@ -98,9 +107,9 @@ export function WallSession({ sessionId }: { sessionId: string }) {
         <Link className="paired-text-link" href="/studio">Combined studio</Link>
       </header>
       {canonical.options.length && selectedOption ? <section className="wall-product" aria-labelledby="wall-options-title">
-        <div className="wall-modebar"><div><p className="eyebrow">Canonical room · revision synchronized</p><h1 id="wall-options-title">{wallMode === "compare" ? "Version comparison" : selectedOption.name}</h1></div><div role="group" aria-label="Wall mode"><button aria-pressed={wallMode === "explore"} onClick={() => setWallMode("explore")}>Explore</button><button aria-pressed={wallMode === "model"} onClick={() => setWallMode("model")}>Model</button>{canonical.comparison ? <button aria-pressed={wallMode === "compare"} onClick={() => setWallMode("compare")}>Compare</button> : null}</div></div>
+        <div className="wall-modebar"><div><p className="eyebrow">Canonical room · revision synchronized</p><h1 id="wall-options-title">{wallMode === "compare" ? "Version comparison" : wallMode === "review" ? "Architect review" : selectedOption.name}</h1></div><div role="group" aria-label="Wall mode"><button aria-pressed={wallMode === "explore"} onClick={() => setWallMode("explore")}>Explore</button><button aria-pressed={wallMode === "model"} onClick={() => setWallMode("model")}>Model</button>{canonical.comparison ? <button aria-pressed={wallMode === "compare"} onClick={() => setWallMode("compare")}>Compare</button> : null}{reviewVersion ? <button aria-pressed={wallMode === "review"} onClick={() => setWallMode("review")}>Review</button> : null}</div></div>
         {captureVersion ? <SnapshotCapture version={captureVersion} onCaptured={storeSnapshot} /> : null}
-        {wallMode === "compare" && comparisonVersions.length === 2 ? <WallComparison first={comparisonVersions[0]!} second={comparisonVersions[1]!} snapshotUrls={snapshotUrls} captureFailures={captureFailures} /> : <div className="wall-product-grid">
+        {wallMode === "review" && reviewVersion ? <WallReview sessionId={sessionId} canonical={canonical} version={reviewVersion} snapshotUrl={snapshotUrls[reviewVersion.id]} /> : wallMode === "compare" && comparisonVersions.length === 2 ? <WallComparison first={comparisonVersions[0]!} second={comparisonVersions[1]!} snapshotUrls={snapshotUrls} captureFailures={captureFailures} /> : <div className="wall-product-grid">
           <div className="wall-canvas"><StudioModel scene={selectedOption.scene} /></div>
           <aside className="wall-options-rail" aria-label="Generated room directions">
             <p className="eyebrow">{wallMode === "explore" ? "Three checked directions" : "Selected direction"}</p>
@@ -140,6 +149,40 @@ export function WallSession({ sessionId }: { sessionId: string }) {
       </section>}
     </main>
   );
+}
+
+export function buildArchitectReviewPayload(sessionId: string, canonical: PairedCanonicalState, version: PairedVersion) {
+  const validation = validateScene(version.scene);
+  const objectSchedule = version.scene.objects.map((object) => ({ id: object.id, label: object.label, category: object.category, assetId: object.assetId, dimensionsMeters: object.dimensions, positionMeters: object.transform.position, rotationRadians: object.transform.rotation, materialIds: object.materialIds, protected: object.protected, placementClass: object.placementClass, provenance: object.provenance }));
+  const surfaceSchedule = [...version.scene.zones.map((zone) => ({ id: zone.id, label: zone.label, kind: zone.kind, materialId: zone.materialId, protected: zone.protected, provenance: zone.provenance })), ...version.scene.objects.filter((object) => object.materialIds.length).map((object) => ({ id: object.id, label: object.label, kind: object.category, materialIds: object.materialIds, protected: object.protected, provenance: object.provenance }))];
+  return {
+    schemaVersion: "1.0",
+    packageType: "architect_concept_review",
+    disclosure: "Concept design only — not construction documentation. Verify field measurements, drawings, code, engineering, permits, products, and procurement with qualified professionals.",
+    exportedAt: new Date().toISOString(), sessionId,
+    brief: canonical.brief, declaredDimensionsMeters: canonical.source?.dimensions,
+    selectedVersion: version,
+    alternatives: canonical.versions.filter((candidate) => candidate.id !== version.id).map((candidate) => ({ id: candidate.id, name: candidate.name, optionId: candidate.optionId, createdAt: candidate.createdAt })),
+    optionRationale: canonical.options.find((option) => option.id === version.optionId)?.rationale,
+    objectSchedule, surfaceSchedule, validation,
+    receipts: canonical.receipts,
+    unresolvedChecks: ["Field-verify all entered dimensions and existing conditions.", "Architect to verify egress, accessibility, code, structure, services, and buildability.", ...validation.findings.map((finding) => finding.message)],
+  };
+}
+
+function WallReview({ sessionId, canonical, version, snapshotUrl }: { sessionId: string; canonical: PairedCanonicalState; version: PairedVersion; snapshotUrl?: string }) {
+  const payload = useMemo(() => buildArchitectReviewPayload(sessionId, canonical, version), [canonical, sessionId, version]);
+  const rationale = canonical.options.find((option) => option.id === version.optionId)?.rationale;
+  function downloadJson() {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
+    const anchor = document.createElement("a"); anchor.href = url; anchor.download = `interiorin-${version.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-concept-review.json`; anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+  return <section className="wall-review"><div className="wall-review-actions"><p><strong>{version.name}</strong> is the single selected review source.</p><div><button type="button" onClick={() => window.print()}><Printer aria-hidden="true" /> Print / save sheet</button><button type="button" onClick={downloadJson}><Download aria-hidden="true" /> Download structured JSON</button></div></div><article className="review-sheet" aria-labelledby="review-sheet-title"><header><div><p className="eyebrow">Interiorin · architect concept review</p><h2 id="review-sheet-title">{version.name}</h2><p>{rationale}</p></div><strong>Concept design<br />not construction documentation</strong></header><section className="review-hero"><div>{snapshotUrl ? <Image src={snapshotUrl} alt={`Selected canonical view of ${version.name}`} width={960} height={600} unoptimized /> : <div className="snapshot-fallback"><strong>Canonical snapshot unavailable</strong><span>The structured scene and schedules remain authoritative.</span></div>}</div><dl><div><dt>Intent</dt><dd>{canonical.brief?.purpose}</dd></div><div><dt>Desired feeling</dt><dd>{canonical.brief?.feeling}</dd></div><div><dt>Declared envelope</dt><dd>{canonical.source ? `${canonical.source.dimensions.widthM.toFixed(2)} × ${canonical.source.dimensions.depthM.toFixed(2)} × ${canonical.source.dimensions.heightM.toFixed(2)} m` : "Not entered"}</dd></div><div><dt>Validation</dt><dd>{payload.validation.status.toUpperCase()} · {payload.validation.findings.length} finding(s)</dd></div></dl></section><ReviewTable title="Object schedule" columns={["Object", "Size W × D × H", "Position x / z", "Rotation", "Materials · authority"]} rows={version.scene.objects.map((object) => [object.label, `${object.dimensions.width.toFixed(2)} × ${object.dimensions.depth.toFixed(2)} × ${object.dimensions.height.toFixed(2)} m`, `${object.transform.position.x.toFixed(2)} / ${object.transform.position.z.toFixed(2)} m`, `${Math.round(object.transform.rotation.y * 180 / Math.PI)}°`, `${object.materialIds.join(", ") || "—"} · ${object.provenance.authority.replaceAll("_", " ")}${object.protected ? " · protected" : ""}`])} /><ReviewTable title="Surface and material schedule" columns={["Surface", "Kind", "Material", "Authority"]} rows={version.scene.zones.map((zone) => [zone.label, zone.kind, zone.materialId, zone.provenance.authority.replaceAll("_", " ")])} /><section className="review-findings"><div><h3>Spatial validation</h3>{payload.validation.findings.length ? <ul>{payload.validation.findings.map((finding) => <li key={finding.id} data-severity={finding.severity}><strong>{finding.type}</strong>{finding.message}{finding.measuredMeters !== undefined ? <span>Measured {Math.round(finding.measuredMeters * 1000)} mm{finding.requiredMeters ? ` · target ${Math.round(finding.requiredMeters * 1000)} mm` : ""}</span> : null}</li>)}</ul> : <p>No deterministic envelope, overlap, or configured-clearance findings in this concept scene.</p>}</div><div><h3>Decision receipts</h3>{canonical.receipts.length ? <ul>{canonical.receipts.map((receipt) => <li key={receipt.id}><strong>{receipt.status.replaceAll("_", " ")}</strong><span>{receipt.transcript}</span><small>{receipt.receipt?.message ?? receipt.interpretation.disclosure}</small></li>)}</ul> : <p>No accepted or rejected refinement receipts were recorded.</p>}</div></section><section className="review-boundary"><h3>Open professional checks</h3><ul>{payload.unresolvedChecks.map((question) => <li key={question}>{question}</li>)}</ul><p><strong>Professional boundary.</strong> This package does not replace a survey, field measurements, architectural drawings, code review, accessibility review, engineering, permits, product verification, procurement, or construction administration.</p></section><footer><span>Interiorin canonical scene · {version.id.slice(0, 8)}</span><span>Generated {new Date(payload.exportedAt).toLocaleString()}</span></footer></article></section>;
+}
+
+function ReviewTable({ title, columns, rows }: { title: string; columns: string[]; rows: string[][] }) {
+  return <section className="review-table"><h3>{title}</h3><div><table><thead><tr>{columns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{rows.map((row, rowIndex) => <tr key={`${title}-${rowIndex}`}>{row.map((cell, cellIndex) => cellIndex === 0 ? <th scope="row" key={columns[cellIndex]}>{cell}</th> : <td key={columns[cellIndex]}>{cell}</td>)}</tr>)}</tbody></table></div></section>;
 }
 
 function SnapshotCapture({ version, onCaptured }: { version: PairedVersion; onCaptured: (versionId: string, blob: Blob | null) => void }) {
