@@ -2,8 +2,8 @@
 
 **Locked baseline:** `7e3a42e`  
 **Deadline:** July 21, 2026, 5:00 pm PT  
-**Current phase:** Phase 6 — selected-design architect handoff
-**Status:** Phase 5 complete; production Supabase verification remains open
+**Current phase:** Phase 7 — release verification and deploy readiness
+**Status:** Phase 6 complete; production Supabase verification remains open
 
 This is the single implementation ledger for the paired Phone Controller and Studio Wall release. Every phase records its verified commit and evidence before the next phase starts. Scope changes require an ADR under `docs/decisions/`.
 
@@ -15,8 +15,8 @@ This is the single implementation ledger for the paired Phone Controller and Stu
 | 3 | Guided phone intake and synchronized wall | Complete | `2b45955` | JPEG normalization and HEIC rejection; private Storage path; entered dimensions; provider-optional observations; retained-object confirmation; four text/push-to-talk prompts; shared canonical reducer; authenticated command API; synchronized Explore/Model wall; 26 files / 79 tests; production build; paired Playwright 3 passed / 3 intentional skips |
 | 4 | Checked refinement and Decision Trace | Complete | `2e13d10` | Local-first interpretation; gated `/api/refine`; capped scene context; validated IDs/variants; deterministic receipts; phone approval/rejection; atomic revision + event RPC; sanitized wall trace; accepted/rejected/fallback no-mutation browser proof; 27 files / 81 tests; production build; paired Playwright 3 passed / 3 intentional skips |
 | 5 | Exact named-version comparison | Complete | `1ad9f45` | Named canonical scenes (12-version cap); fixed-camera wall capture with camera restoration; session-only object URLs and cleanup; refresh regeneration from stored scenes; responsive two-version wall; authoritative semantic table and explicit WebGL fallback; phone comparison controls; 27 files / 82 tests; lint; strict TypeScript; production build; paired intake→save A→commit→save B→compare→refresh Playwright passed; wall and phone visuals inspected; secret scan clean |
-| 6 | Selected-design architect handoff | In progress | — | — |
-| 7 | Release verification and deploy readiness | Pending | — | — |
+| 6 | Selected-design architect handoff | Complete | `ebc9a3b` | Single selected saved scene; wall Review mode; print-ready concept sheet; canonical snapshot fallback; declared envelope; object/surface schedules; provenance/protection; deterministic clearance findings; committed/rejected receipts; open professional checks; mandatory concept-only boundary; matching structured JSON download; 28 files / 83 tests; lint; strict TypeScript; production build; paired selection→Review→JSON parity→print-media Playwright passed; review visual inspected; secret scan clean |
+| 7 | Release verification and deploy readiness | In progress | — | — |
 
 ## Open gate evidence
 
