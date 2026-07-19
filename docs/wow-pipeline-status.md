@@ -2,8 +2,8 @@
 
 **Locked baseline:** `7e3a42e`  
 **Deadline:** July 21, 2026, 5:00 pm PT  
-**Current phase:** 7A — bounded voice and visual Reveal scope revision
-**Status:** Credential-free release remains complete; provider-backed hero extension is in progress under ADR 0002
+**Current phase:** 7H — provider configuration and production release
+**Status:** Voice/Reveal implementation is locally green under ADR 0002; real-device Supabase and live Nano Banana remain explicit external gates
 
 This is the single implementation ledger for the paired Phone Controller and Studio Wall release. Every phase records its verified commit and evidence before the next phase starts. Scope changes require an ADR under `docs/decisions/`.
 
@@ -17,12 +17,19 @@ This is the single implementation ledger for the paired Phone Controller and Stu
 | 5 | Exact named-version comparison | Complete | `1ad9f45` | Named canonical scenes (12-version cap); fixed-camera wall capture with camera restoration; session-only object URLs and cleanup; refresh regeneration from stored scenes; responsive two-version wall; authoritative semantic table and explicit WebGL fallback; phone comparison controls; 27 files / 82 tests; lint; strict TypeScript; production build; paired intake→save A→commit→save B→compare→refresh Playwright passed; wall and phone visuals inspected; secret scan clean |
 | 6 | Selected-design architect handoff | Complete | `ebc9a3b` | Single selected saved scene; wall Review mode; print-ready concept sheet; canonical snapshot fallback; declared envelope; object/surface schedules; provenance/protection; deterministic clearance findings; committed/rejected receipts; open professional checks; mandatory concept-only boundary; matching structured JSON download; 28 files / 83 tests; lint; strict TypeScript; production build; paired selection→Review→JSON parity→print-media Playwright passed; review visual inspected; secret scan clean |
 | 7 | Release verification and deploy readiness | Release complete in disclosed same-device/offline mode | `7b33fc2` | End/delete controls on phone and wall; authenticated Supabase deletion + private source removal; hourly expiry cleanup migration; README/env/Codex Session ID; unused ElevenLabs dependency and 16 transitive packages removed; npm audit 0 vulnerabilities; 28 files / 84 tests; lint; strict TypeScript; production build; repository-wide Playwright 12 passed / 8 intentional skips; production pairing/deletion + full intake/refine/compare/review/export smoke 2 passed; deployed at `https://interiorin-beta.vercel.app`; secret scan clean |
-| 7A | Reopen concise ElevenLabs voice and revision-linked visual Reveal | In progress | — | ADR 0002 accepted; independent voice/reveal feature flags; licensed/demo fixture placement; baseline gate pending |
+| 7A | Reopen concise ElevenLabs voice and revision-linked visual Reveal | Complete | `f4eb18e` | ADR 0002 accepted; independent voice/reveal flags; demo fixture placed intentionally; 84-test baseline, lint, strict TypeScript, production build, and secret scan green |
+| 7B | Real-phone and demo-room intake | Code complete; production Supabase blocked | pending milestone | Three explicit source choices; 2048 px / 5 MB JPEG normalization; pre-decode HEIC recovery; disclosed 5.2 × 4.0 × 2.7 m demo estimate; compact editable measurements; actual request-origin QR; live Supabase fail-closed flag; desktop and Pixel paired intake proof |
+| 7C–7D | Secure concise ElevenLabs voice and editable intake | Locally complete; live real-phone proof awaits Supabase | pending milestone | Pinned React SDK; authenticated controller-only signed URL endpoint; rate limiting; consent; lazy runtime mount; independent microphone/output mute; stop and typed fallback; three schema-restricted tools; one combined question; user-owned agent configured with signed auth, patient turn-taking, 12-second timeout, zero retention; signed WebSocket canary passed |
+| 7E | Revision-linked Nano Banana Reveal | Code complete; live generation blocked by Google quota | pending milestone | Strict controlled brief compiler; direct Gemini provider adapter; authenticated revision/idempotency checks; private render bucket migration; safe events and provenance; wall Source/3D/Reveal triptych; stale state after canonical mutation; model-list canary passed; generation correctly failed with `429 RESOURCE_EXHAUSTED` and quota `0` without canonical mutation |
+| 7F–7G | Voice refinement, comparison, and handoff parity | Locally complete; provider proof pending | pending milestone | Finalized voice transcript enters the existing checked proposal flow; approval remains explicit and idempotent; Reveal provenance is presentation-only in review JSON; canonical snapshots, factual diff, receipts, review sheet, and deletion remain authoritative; 32 files / 92 tests, lint, strict TypeScript, production build, paired desktop journey green |
+| 7H | UX polish and production release | Local gate complete; production configuration pending | — | Pixel 7 phone and desktop wall screenshots inspected; lazy consent-first voice mount fixed a real browser/runtime defect; 92 tests, zero-warning lint, strict TypeScript, production build, and repository-wide Playwright 12 passed / 8 intentional skips; Vercel configuration, exact-commit deployment, and two production journeys remain |
 
 ## Open gate evidence
 
-- Production Supabase project credentials are not configured in this workspace, so anonymous Auth, private Realtime membership, Storage RLS, expiry cleanup, token reuse rejection, and real-phone cross-device recovery are implemented but not yet verified against a deployed project.
+- The Supabase CLI has no management access token, anonymous Auth is disabled, and the configured server secret is mismatched. Private membership RLS, private-channel configuration, source/render Storage policies, expiry cleanup, and recovery are implemented and reviewed against current official guidance, but cannot be applied or claimed against production yet. `NEXT_PUBLIC_ENABLE_LIVE_SUPABASE` therefore remains false.
 - Live OpenAI credentials plus a genuine exact-model canary response ID are not configured, so the deployed release uses the disclosed deterministic parser/fallback and does not claim a live-provider pass.
+- ElevenLabs agent configuration and signed-URL canary pass. End-to-end phone voice awaits the verified Supabase controller identity because the voice endpoint correctly fails closed in same-device mode.
+- The Google API key and `gemini-3.1-flash-image` model resolve, but live image generation returns `429 RESOURCE_EXHAUSTED` with quota `0`. Billing/quota is required before Reveal can receive a live pass.
 - Production therefore visibly labels same-device demo mode. The complete fallback journey is deployed and production-smoke-tested; these are external configuration gates, not hidden passes.
 
 ## Locked cuts
@@ -32,7 +39,7 @@ This is the single implementation ledger for the paired Phone Controller and Stu
 - Wall art and chair assets
 - Photogrammetry, accounts, collaboration, telemetry, and state-store refactors
 
-## Reopened under ADR 0002
+## Included under ADR 0002
 
 - Optional, concise ElevenLabs voice with typed parity and no mutation authority
 - Explicit Nano Banana presentation Reveal linked to canonical revision and disclosed as unmeasured

@@ -26,6 +26,14 @@ export default defineConfig({
   ],
   webServer: {
     command: "npm run build && npx next start -p 3211",
+    env: {
+      ...process.env,
+      // Keep the release journey deterministic even when a developer's local
+      // provider flags are enabled in .env. Live-provider canaries run
+      // separately and never make the core browser suite depend on quota.
+      NEXT_PUBLIC_ENABLE_CONCEPT_RENDER: "false",
+      NEXT_PUBLIC_ENABLE_LIVE_SUPABASE: "false",
+    },
     url: "http://localhost:3211",
     reuseExistingServer: false,
     timeout: 180_000,

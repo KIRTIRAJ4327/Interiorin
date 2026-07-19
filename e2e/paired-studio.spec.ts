@@ -45,7 +45,7 @@ test("phone controller is readable at Pixel 7 width", async ({ page }, testInfo)
   const joinUrl = storedSession ? (JSON.parse(storedSession) as { joinUrl: string }).joinUrl : null;
   await page.goto(joinUrl!);
   await expect(page.getByText("Paired", { exact: true })).toBeVisible();
-  await expect(page.locator(".phone-file")).toHaveCSS("min-height", "72px");
+  await expect(page.locator(".phone-file").first()).toHaveCSS("min-height", "72px");
   await expect(page.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth)).resolves.toBe(true);
   await page.screenshot({ path: testInfo.outputPath("paired-phone-pixel7.png"), fullPage: true });
 });
@@ -65,19 +65,23 @@ test("phone intake generates the same canonical options on the Studio Wall", asy
   await phone.route("**/api/space-analysis", async (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ status: "provider_unavailable", disclosure: "Visual analysis unavailable in this test; entered dimensions remain usable." }) }));
   await phone.goto(joinUrl);
   await expect(phone.getByRole("heading", { name: "Show us the room. You keep control of the facts." })).toBeVisible();
-  await phone.locator('input[type="file"]').setInputFiles({
-    name: "room.svg", mimeType: "image/svg+xml",
-    buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="#d8d0c3"/><rect y="520" width="1200" height="280" fill="#a58c68"/><rect x="120" y="180" width="430" height="320" fill="#f5f0e7"/></svg>'),
-  });
-  await expect(phone.getByRole("img", { name: "Normalized room source preview" })).toBeVisible();
-  await phone.getByRole("button", { name: /Continue to brief/ }).click();
+  await phone.getByRole("button", { name: /Use demo room/ }).click();
+  await expect(phone.getByRole("img", { name: "Interiorin demo living room preview" })).toBeVisible();
+  await expect(phone.getByText("Demo estimate · not measured")).toBeVisible();
+  await phone.getByRole("button", { name: "Use this room" }).click();
   await expect(phone.getByRole("heading", { name: "Tell us how life should feel here." })).toBeVisible();
+  await expect(phone.getByRole("heading", { name: "Say the whole brief once." })).toBeVisible();
+  await phone.getByRole("checkbox", { name: /Start an AI voice conversation/ }).check();
+  await phone.getByRole("button", { name: "Start voice" }).click();
+  await expect(phone.getByRole("alert").filter({ hasText: "Verified phone pairing is required for voice" })).toBeVisible();
+  await phone.getByRole("button", { name: "Type instead" }).first().click();
+  await expect(phone.locator("#brief-purpose")).toBeFocused();
   await expect(phone.getByRole("button", { name: /Push to talk for/ })).toHaveCount(4);
   await phone.getByRole("textbox", { name: "What should this room support?" }).fill("Family conversation, reading, and a calm evening routine");
   await phone.getByRole("textbox", { name: "How should it feel?" }).fill("Warm, calm, tactile, and uncluttered");
   await phone.getByRole("textbox", { name: "What must remain?" }).fill("Keep the existing sofa and clear access to the window");
   await phone.getByRole("textbox", { name: "What should improve or be avoided?" }).fill("Improve circulation and avoid bulky furniture");
-  await phone.getByRole("button", { name: /Generate three directions/ }).click();
+  await phone.getByRole("button", { name: "Confirm my brief" }).click();
   await expect(phone.getByRole("heading", { name: "Choose the direction worth refining." })).toBeVisible();
   await expect(phone.locator(".phone-options button")).toHaveCount(3);
   await expect(page.locator("#wall-options-title")).toHaveText("Clear Passage");
@@ -96,7 +100,7 @@ test("phone intake generates the same canonical options on the Studio Wall", asy
   await phone.getByRole("button", { name: "Save version" }).click();
   await expect(phone.locator(".phone-versions li").filter({ hasText: "Conversation base" })).toBeVisible();
   await phone.getByRole("textbox", { name: "Refinement request" }).fill("Move the table right 30 cm");
-  await phone.getByRole("button", { name: "Check proposed change" }).click();
+  await phone.getByRole("button", { name: "Check this change" }).click();
   await expect(phone.getByRole("heading", { name: "Approve only the checked action." })).toBeVisible();
   await expect(phone.getByText("Deterministic checks passed")).toBeVisible();
   await expect(page.getByText("awaiting approval")).toBeVisible();
@@ -116,11 +120,11 @@ test("phone intake generates the same canonical options on the Studio Wall", asy
   await expect(page.getByRole("heading", { name: "Conversation base versus Table shifted" })).toBeVisible();
   await expect(page.getByRole("table", { name: "Authoritative scene changes from Conversation base to Table shifted" })).toContainText("Moved");
   await phone.getByRole("textbox", { name: "Refinement request" }).fill("Move the table right 10 m");
-  await phone.getByRole("button", { name: "Check proposed change" }).click();
+  await phone.getByRole("button", { name: "Check this change" }).click();
   await expect(phone.locator(".phone-proposal[data-status='rejected']")).toContainText("outside the entered space envelope");
   expect(await tableX()).toBeCloseTo(committedX, 5);
   await phone.getByRole("textbox", { name: "Refinement request" }).fill("Move it over");
-  await phone.getByRole("button", { name: "Check proposed change" }).click();
+  await phone.getByRole("button", { name: "Check this change" }).click();
   await expect(phone.locator(".phone-proposal[data-status='clarification']")).toContainText("Name a visible object");
   expect(await tableX()).toBeCloseTo(committedX, 5);
   await phone.locator(".phone-review-select button").filter({ hasText: "Table shifted" }).click();

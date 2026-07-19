@@ -41,9 +41,11 @@ export async function DELETE(request: Request, { params }: Context) {
   if (!membership) return NextResponse.json({ error: "Session membership required." }, { status: 403 });
   const { data: session } = await admin.from("studio_sessions").select("canonical_state").eq("id", sessionId).maybeSingle();
   if (!session) return NextResponse.json({ deleted: true });
-  const canonical = session.canonical_state as { source?: { objectPath?: string } } | null;
+  const canonical = session.canonical_state as { source?: { objectPath?: string }; visualReveal?: { objectPath?: string } } | null;
   const objectPath = canonical?.source?.objectPath;
   if (objectPath && !objectPath.startsWith("local/")) await admin.storage.from("studio-sources").remove([objectPath]);
+  const revealPath = canonical?.visualReveal?.objectPath;
+  if (revealPath) await admin.storage.from("studio-renders").remove([revealPath]);
   const { error } = await admin.from("studio_sessions").delete().eq("id", sessionId);
   if (error) return NextResponse.json({ error: "Session deletion failed." }, { status: 500 });
   return NextResponse.json({ deleted: true });

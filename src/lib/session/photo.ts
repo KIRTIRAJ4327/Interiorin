@@ -5,14 +5,18 @@ export function isUnsupportedHeic(file: Pick<File, "name" | "type">) {
   return /\.(heic|heif)$/i.test(file.name) || /image\/(heic|heif)/i.test(file.type);
 }
 
+export function isSupportedRoomImage(file: Pick<File, "name" | "type">) {
+  return /image\/(jpeg|png|webp)/i.test(file.type) || (!file.type && /\.(jpe?g|png|webp)$/i.test(file.name));
+}
+
 export function fittedImageSize(width: number, height: number, longestEdge = normalizedPhotoLongestEdge) {
   const scale = Math.min(1, longestEdge / Math.max(width, height));
   return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
 }
 
 export async function normalizeRoomPhoto(file: File) {
-  if (isUnsupportedHeic(file)) throw new Error("HEIC is not supported in this browser. Capture or choose a JPEG photo instead.");
-  if (!file.type.startsWith("image/")) throw new Error("Choose a browser-decodable room image.");
+  if (isUnsupportedHeic(file)) throw new Error("This HEIC photo cannot be decoded here. On Samsung, turn off High efficiency pictures in Camera settings, then capture a JPEG—or use the demo room now.");
+  if (!isSupportedRoomImage(file)) throw new Error("Choose a JPEG, PNG, or WebP room image.");
   const sourceUrl = URL.createObjectURL(file);
   try {
     const image = await new Promise<HTMLImageElement>((resolve, reject) => {

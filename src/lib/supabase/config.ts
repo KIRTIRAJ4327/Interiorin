@@ -4,6 +4,7 @@ export type SupabasePublicConfig = {
 };
 
 export function getSupabasePublicConfig(): SupabasePublicConfig | null {
+  if (process.env.NEXT_PUBLIC_ENABLE_LIVE_SUPABASE !== "true") return null;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
   return url && publishableKey ? { url, publishableKey } : null;

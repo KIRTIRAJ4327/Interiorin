@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { applyStudioCommand } from "./reducer";
-import type { StudioCommand } from "./schema";
+import { pairedCanonicalStateSchema, type StudioCommand } from "./schema";
 import { parseStudioRefinement } from "@/lib/studio/refinement";
 
 const common = { idempotencyKey: crypto.randomUUID(), expectedRevision: 0, clientTimestamp: "2026-07-18T12:00:00.000Z" };
@@ -16,6 +16,9 @@ describe("paired canonical reducer", () => {
     expect(state.stage).toBe("options");
 
     state = applyStudioCommand(state, { ...common, type: "select_option", optionId: state.options[0]!.id }, crypto.randomUUID());
+    state = applyStudioCommand(state, { ...common, type: "request_visual_reveal" }, crypto.randomUUID());
+    expect(state.visualReveal).toMatchObject({ status: "requested", canonicalRevision: state.designRevision });
+    state = pairedCanonicalStateSchema.parse({ ...state, visualReveal: { ...state.visualReveal, status: "generated", objectPath: "session/reveal.png", sourceObjectPath: "local/source.jpg", model: "gemini-3.1-flash-image", createdAt: common.clientTimestamp, disclosure: "AI visual hypothesis—not measured." } });
     const firstVersionId = crypto.randomUUID();
     state = applyStudioCommand(state, { ...common, idempotencyKey: firstVersionId, type: "save_version", name: "Conversation base" }, crypto.randomUUID());
     const before = state.options[0]!.scene.objects.find((object) => object.id === "table")!.transform.position.x;
@@ -28,6 +31,7 @@ describe("paired canonical reducer", () => {
     expect(state.options[0]!.scene.objects.find((object) => object.id === "table")!.transform.position.x).toBe(before);
     state = applyStudioCommand(state, { ...common, type: "confirm_proposal", proposalId }, crypto.randomUUID());
     expect(state.proposals.at(-1)?.status).toBe("committed");
+    expect(state.visualReveal?.status).toBe("stale");
     expect(state.options[0]!.scene.objects.find((object) => object.id === "table")!.transform.position.x).toBeCloseTo(before + 0.3);
     const secondVersionId = crypto.randomUUID();
     state = applyStudioCommand(state, { ...common, idempotencyKey: secondVersionId, type: "save_version", name: "Table shifted" }, crypto.randomUUID());

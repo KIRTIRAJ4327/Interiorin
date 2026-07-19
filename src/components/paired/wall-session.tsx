@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Check, CircleAlert, Download, Link2, Printer, Radio, ScanLine, ShieldCheck, Trash2 } from "lucide-react";
+import { Check, CircleAlert, Download, Link2, Printer, Radio, ScanLine, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
 import { pairedCanonicalStateSchema, type PairedCanonicalState, type SessionCreateEnvelope, type StudioEvent } from "@/lib/session/schema";
 import { createSessionTransport, type SessionTransport } from "@/lib/session/transport";
 import { StudioModel, type StudioModelHandle } from "@/components/product/studio-model";
 import { compareScenes } from "@/lib/spatial/diff";
 import { validateScene } from "@/lib/spatial/validation";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type PairedVersion = PairedCanonicalState["versions"][number];
 
@@ -22,7 +23,8 @@ export function WallSession({ sessionId }: { sessionId: string }) {
   const [events, setEvents] = useState<StudioEvent[]>([]);
   const [message, setMessage] = useState("Opening the private session channel…");
   const [canonical, setCanonical] = useState<PairedCanonicalState>(() => pairedCanonicalStateSchema.parse({}));
-  const [wallMode, setWallMode] = useState<"explore" | "model" | "compare" | "review">("explore");
+  const [wallMode, setWallMode] = useState<"explore" | "model" | "reveal" | "compare" | "review">("explore");
+  const [revealUrls, setRevealUrls] = useState<{ source?: string; reveal?: string }>({});
   const [snapshotUrls, setSnapshotUrls] = useState<Record<string, string>>({});
   const [captureFailures, setCaptureFailures] = useState<Set<string>>(() => new Set());
   const [captureVersionId, setCaptureVersionId] = useState("");
@@ -63,6 +65,7 @@ export function WallSession({ sessionId }: { sessionId: string }) {
       }
       if (event.eventType === "review_version_selected") setWallMode("review");
       if (event.eventType === "comparison_selected") setWallMode("compare");
+      if (event.eventType === "visual_reveal_generated") setWallMode("reveal");
       void recover();
     });
     void transport.connect().then(async () => {
@@ -84,6 +87,24 @@ export function WallSession({ sessionId }: { sessionId: string }) {
   const reviewVersion = canonical.versions.find((version) => version.id === canonical.selectedReviewVersionId) ?? canonical.versions.at(-1);
   const snapshotCandidates = useMemo(() => [...comparisonVersions, ...(reviewVersion ? [reviewVersion] : [])].filter((version, index, versions) => versions.findIndex((candidate) => candidate.id === version.id) === index), [comparisonVersions, reviewVersion]);
   const captureVersion = canonical.versions.find((version) => version.id === captureVersionId);
+
+  useEffect(() => {
+    let active = true;
+    const reveal = canonical.visualReveal;
+    if (mode !== "supabase" || !canonical.source?.objectPath || !reveal?.objectPath || (reveal.status !== "generated" && reveal.status !== "stale")) {
+      const reset = window.setTimeout(() => setRevealUrls({}), 0);
+      return () => window.clearTimeout(reset);
+    }
+    const client = getSupabaseBrowserClient();
+    if (!client) return;
+    void Promise.all([
+      client.storage.from("studio-sources").createSignedUrl(canonical.source.objectPath, 3600),
+      client.storage.from("studio-renders").createSignedUrl(reveal.objectPath, 3600),
+    ]).then(([source, rendered]) => {
+      if (active) setRevealUrls({ source: source.data?.signedUrl, reveal: rendered.data?.signedUrl });
+    });
+    return () => { active = false; };
+  }, [canonical.source?.objectPath, canonical.visualReveal, mode]);
 
   useEffect(() => () => { Object.values(snapshotUrlsRef.current).forEach((url) => URL.revokeObjectURL(url)); }, []);
   useEffect(() => {
@@ -127,14 +148,15 @@ export function WallSession({ sessionId }: { sessionId: string }) {
         <div className="wall-header-actions"><Link className="paired-text-link" href="/studio">Combined studio</Link><button type="button" onClick={() => void endSession()} aria-label="End and delete session"><Trash2 aria-hidden="true" /></button></div>
       </header>
       {canonical.options.length && selectedOption ? <section className="wall-product" aria-labelledby="wall-options-title">
-        <div className="wall-modebar"><div><p className="eyebrow">Canonical room · revision synchronized</p><h1 id="wall-options-title">{wallMode === "compare" ? "Version comparison" : wallMode === "review" ? "Architect review" : selectedOption.name}</h1></div><div role="group" aria-label="Wall mode"><button aria-pressed={wallMode === "explore"} onClick={() => setWallMode("explore")}>Explore</button><button aria-pressed={wallMode === "model"} onClick={() => setWallMode("model")}>Model</button>{canonical.comparison ? <button aria-pressed={wallMode === "compare"} onClick={() => setWallMode("compare")}>Compare</button> : null}{reviewVersion ? <button aria-pressed={wallMode === "review"} onClick={() => setWallMode("review")}>Review</button> : null}</div></div>
+        <div className="wall-modebar"><div><p className="eyebrow">Canonical room · revision synchronized</p><h1 id="wall-options-title">{wallMode === "compare" ? "Version comparison" : wallMode === "review" ? "Architect review" : wallMode === "reveal" ? "Room Reveal" : selectedOption.name}</h1></div><div role="group" aria-label="Wall mode"><button aria-pressed={wallMode === "explore"} onClick={() => setWallMode("explore")}>Explore</button><button aria-pressed={wallMode === "model"} onClick={() => setWallMode("model")}>Model</button>{canonical.visualReveal?.objectPath ? <button aria-pressed={wallMode === "reveal"} onClick={() => setWallMode("reveal")}>Reveal</button> : null}{canonical.comparison ? <button aria-pressed={wallMode === "compare"} onClick={() => setWallMode("compare")}>Compare</button> : null}{reviewVersion ? <button aria-pressed={wallMode === "review"} onClick={() => setWallMode("review")}>Review</button> : null}</div></div>
         {captureVersion ? <SnapshotCapture version={captureVersion} onCaptured={storeSnapshot} /> : null}
-        {wallMode === "review" && reviewVersion ? <WallReview sessionId={sessionId} canonical={canonical} version={reviewVersion} snapshotUrl={snapshotUrls[reviewVersion.id]} /> : wallMode === "compare" && comparisonVersions.length === 2 ? <WallComparison first={comparisonVersions[0]!} second={comparisonVersions[1]!} snapshotUrls={snapshotUrls} captureFailures={captureFailures} /> : <div className="wall-product-grid">
+        {wallMode === "review" && reviewVersion ? <WallReview sessionId={sessionId} canonical={canonical} version={reviewVersion} snapshotUrl={snapshotUrls[reviewVersion.id]} /> : wallMode === "compare" && comparisonVersions.length === 2 ? <WallComparison first={comparisonVersions[0]!} second={comparisonVersions[1]!} snapshotUrls={snapshotUrls} captureFailures={captureFailures} /> : wallMode === "reveal" && canonical.visualReveal?.objectPath ? <WallReveal canonical={canonical} sourceUrl={revealUrls.source} revealUrl={revealUrls.reveal} /> : <div className="wall-product-grid">
           <div className="wall-canvas"><StudioModel scene={selectedOption.scene} /></div>
           <aside className="wall-options-rail" aria-label="Generated room directions">
             <p className="eyebrow">{wallMode === "explore" ? "Three checked directions" : "Selected direction"}</p>
             {wallMode === "explore" ? canonical.options.map((option, index) => <article key={option.id} data-selected={option.id === selectedOption.id}><span>0{index + 1}</span><div><small>{option.principle}</small><h2>{option.name}</h2><p>{option.rationale}</p></div></article>) : <><h2>{selectedOption.principle}</h2><p>{selectedOption.rationale}</p><dl><div><dt>Envelope</dt><dd>{selectedOption.scene.zones[0]?.polygon[1]?.x.toFixed(1)} m declared width</dd></div><div><dt>Objects</dt><dd>{selectedOption.scene.objects.length} canonical objects</dd></div><div><dt>Authority</dt><dd>Dimensions entered on phone</dd></div></dl></>}
             {activeProposal ? <section className="wall-live-trace" aria-label="Live Decision Trace" aria-live="polite"><p className="eyebrow">Decision Trace · {activeProposal.id.slice(0, 8)}</p><blockquote>{activeProposal.transcript}</blockquote><ol><li className="is-done"><Check />Request received</li><li className="is-done"><Check />Interpreted · {activeProposal.interpretation.mode.replaceAll("_", " ")}</li><li className="is-done"><Check />Typed schema valid</li><li className={activeProposal.receipt ? "is-done" : ""}>{activeProposal.receipt ? <Check /> : null}Spatially checked</li><li className={activeProposal.status === "awaiting_approval" ? "is-active" : activeProposal.status === "committed" || activeProposal.status === "rejected" ? "is-done" : ""}>{activeProposal.status === "committed" || activeProposal.status === "rejected" ? <Check /> : null}{activeProposal.status.replaceAll("_", " ")}</li></ol>{activeProposal.receipt ? <p data-status={activeProposal.receipt.status}>{activeProposal.receipt.message}</p> : <p>{activeProposal.interpretation.clarification}</p>}<small>{activeProposal.interpretation.disclosure}</small></section> : null}
+            {canonical.visualReveal?.status === "requested" ? <p className="wall-reveal-progress" aria-live="polite"><Sparkles aria-hidden="true" /> Generating visual reveal</p> : canonical.visualReveal?.status === "failed" ? <p className="wall-reveal-progress" data-status="failed"><CircleAlert aria-hidden="true" /> {canonical.visualReveal.failure}</p> : null}
             <div className="event-ribbon"><span>{events.length} verified events</span><code>{canonical.stage.toUpperCase()}</code></div>
           </aside>
         </div>}
@@ -171,6 +193,22 @@ export function WallSession({ sessionId }: { sessionId: string }) {
   );
 }
 
+function WallReveal({ canonical, sourceUrl, revealUrl }: { canonical: PairedCanonicalState; sourceUrl?: string; revealUrl?: string }) {
+  const selected = canonical.options.find((option) => option.id === canonical.selectedOptionId);
+  const reveal = canonical.visualReveal;
+  if (!selected || !reveal) return null;
+  const stale = reveal.status === "stale";
+  return <section className="wall-reveal" aria-labelledby="wall-reveal-heading">
+    <header><div><p className="eyebrow">Source → checked 3D → visual hypothesis</p><h2 id="wall-reveal-heading">{selected.name} in the photographed room</h2></div><span data-status={reveal.status}>{stale ? "Earlier revision · 3D has changed" : `Current design revision ${reveal.canonicalRevision}`}</span></header>
+    <div className="wall-reveal-grid">
+      <figure>{sourceUrl ? <Image src={sourceUrl} alt="Original private room photograph" width={1280} height={900} unoptimized /> : <div className="snapshot-fallback"><strong>Loading private source</strong><span>The photograph remains in session-scoped Storage.</span></div>}<figcaption><strong>01 · Source photograph</strong><span>Architecture and camera authority</span></figcaption></figure>
+      <figure><div className="wall-reveal-model"><StudioModel scene={selected.scene} /></div><figcaption><strong>02 · Canonical 3D</strong><span>Dimensions, positions, materials, and checks</span></figcaption></figure>
+      <figure>{revealUrl ? <Image src={revealUrl} alt={`AI visual hypothesis for ${selected.name}`} width={1280} height={900} unoptimized /> : <div className="snapshot-fallback"><strong>Loading private Reveal</strong><span>The generated image never travels through Realtime.</span></div>}<figcaption><strong>03 · Nano Banana Reveal</strong><span>{reveal.model} · {reveal.createdAt ? new Date(reveal.createdAt).toLocaleString() : "Preparing"}</span></figcaption></figure>
+    </div>
+    <footer><ShieldCheck aria-hidden="true" /><p><strong>AI visual hypothesis—not measured.</strong> The Reveal is a presentation layer. Canonical 3D, entered dimensions, deterministic validation, and receipts remain authoritative.</p></footer>
+  </section>;
+}
+
 export function buildArchitectReviewPayload(sessionId: string, canonical: PairedCanonicalState, version: PairedVersion) {
   const validation = validateScene(version.scene);
   const objectSchedule = version.scene.objects.map((object) => ({ id: object.id, label: object.label, category: object.category, assetId: object.assetId, dimensionsMeters: object.dimensions, positionMeters: object.transform.position, rotationRadians: object.transform.rotation, materialIds: object.materialIds, protected: object.protected, placementClass: object.placementClass, provenance: object.provenance }));
@@ -186,6 +224,7 @@ export function buildArchitectReviewPayload(sessionId: string, canonical: Paired
     optionRationale: canonical.options.find((option) => option.id === version.optionId)?.rationale,
     objectSchedule, surfaceSchedule, validation,
     receipts: canonical.receipts,
+    visualRevealProvenance: canonical.visualReveal?.objectPath ? { status: canonical.visualReveal.status, canonicalRevision: canonical.visualReveal.canonicalRevision, model: canonical.visualReveal.model, responseId: canonical.visualReveal.responseId, createdAt: canonical.visualReveal.createdAt, disclosure: canonical.visualReveal.disclosure } : undefined,
     unresolvedChecks: ["Field-verify all entered dimensions and existing conditions.", "Architect to verify egress, accessibility, code, structure, services, and buildability.", ...validation.findings.map((finding) => finding.message)],
   };
 }

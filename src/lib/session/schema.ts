@@ -35,6 +35,7 @@ export const studioCommandSchema = z.discriminatedUnion("type", [
   z.object({ ...commandBase, type: z.literal("save_version"), name: z.string().trim().min(1).max(40) }),
   z.object({ ...commandBase, type: z.literal("select_comparison"), firstVersionId: z.string().min(1), secondVersionId: z.string().min(1) }).refine((value) => value.firstVersionId !== value.secondVersionId, { message: "Choose two different versions." }),
   z.object({ ...commandBase, type: z.literal("select_review_version"), versionId: z.string().min(1) }),
+  z.object({ ...commandBase, type: z.literal("request_visual_reveal") }),
   z.object({ ...commandBase, type: z.literal("end_session") }),
 ]);
 
@@ -48,8 +49,28 @@ export const pairedProposalSchema = z.object({
 export type PairedProposal = z.infer<typeof pairedProposalSchema>;
 export const pairedVersionSchema = z.object({ id: z.string().min(1), name: z.string().trim().min(1).max(40), optionId: z.string().min(1), scene: studioOptionSchema.shape.scene, createdAt: z.string().datetime() });
 
+export const pairedVisualRevealSchema = z.object({
+  status: z.enum(["requested", "generated", "stale", "failed"]),
+  canonicalRevision: z.number().int().nonnegative(),
+  requestedAt: z.string().datetime(),
+  objectPath: z.string().min(3).max(300).optional(),
+  sourceObjectPath: z.string().min(3).max(300).optional(),
+  model: z.string().min(1).max(120).optional(),
+  responseId: z.string().max(180).optional(),
+  latencyMs: z.number().int().nonnegative().max(120_000).optional(),
+  createdAt: z.string().datetime().optional(),
+  disclosure: z.string().min(1).max(320).optional(),
+  failure: z.string().min(1).max(240).optional(),
+}).superRefine((value, context) => {
+  if ((value.status === "generated" || value.status === "stale") && (!value.objectPath || !value.sourceObjectPath || !value.model || !value.createdAt || !value.disclosure)) {
+    context.addIssue({ code: "custom", message: "Generated reveals require private artifact metadata." });
+  }
+  if (value.status === "failed" && !value.failure) context.addIssue({ code: "custom", message: "Failed reveals require a safe recovery message." });
+});
+
 export const pairedCanonicalStateSchema = z.object({
   stage: z.enum(["space", "brief", "options", "refine", "approve", "ended"]).default("space"),
+  designRevision: z.number().int().nonnegative().default(0),
   source: z.object({
     objectPath: z.string().min(3).max(300), fileName: z.string().min(1).max(180), mimeType: z.literal("image/jpeg"),
     byteSize: z.number().int().positive().max(5 * 1024 * 1024), pixelWidth: z.number().int().positive().max(2048), pixelHeight: z.number().int().positive().max(2048),
@@ -66,6 +87,7 @@ export const pairedCanonicalStateSchema = z.object({
   versions: z.array(pairedVersionSchema).max(12).default([]),
   comparison: z.object({ firstVersionId: z.string(), secondVersionId: z.string() }).optional(),
   selectedReviewVersionId: z.string().optional(),
+  visualReveal: pairedVisualRevealSchema.optional(),
 });
 
 export type PairedCanonicalState = z.infer<typeof pairedCanonicalStateSchema>;
@@ -75,6 +97,7 @@ export const studioEventTypeSchema = z.enum([
   "brief_answered", "brief_confirmed", "options_generated", "option_selected",
   "refinement_requested", "proposal_ready", "proposal_rejected", "proposal_confirmed",
   "scene_committed", "version_saved", "comparison_selected", "review_version_selected",
+  "visual_reveal_requested", "visual_reveal_generated", "visual_reveal_failed", "visual_reveal_stale",
   "handoff_exported", "provider_failed", "session_ended",
 ]);
 

@@ -10,7 +10,9 @@ export const runtime = "nodejs";
 const SAME_DEVICE_DISCLOSURE = "Same-device demo mode: controller and wall must be open in this browser on the same origin.";
 
 export async function POST(request: Request) {
-  const origin = process.env.NEXT_PUBLIC_APP_URL?.trim() || new URL(request.url).origin;
+  // Pair to the origin that actually served this wall. This keeps preview deployments,
+  // non-default local ports, and production QR codes on the same reachable origin.
+  const origin = new URL(request.url).origin;
   const credential = createPairingCredential();
   const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
   const config = getSupabaseSecretConfig();

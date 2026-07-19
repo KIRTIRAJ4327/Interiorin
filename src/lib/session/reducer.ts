@@ -10,7 +10,7 @@ export function eventTypeForCommand(command: StudioCommand): StudioEvent["eventT
     submit_source: "source_submitted", confirm_analysis: "source_analyzed", submit_brief: "brief_confirmed",
     generate_options: "options_generated", select_option: "option_selected", request_refinement: "refinement_requested",
     confirm_proposal: "scene_committed", reject_proposal: "proposal_rejected", save_version: "version_saved",
-    select_comparison: "comparison_selected", select_review_version: "review_version_selected", end_session: "session_ended",
+    select_comparison: "comparison_selected", select_review_version: "review_version_selected", request_visual_reveal: "visual_reveal_requested", end_session: "session_ended",
   };
   return eventTypes[command.type];
 }
@@ -41,11 +41,11 @@ export function applyStudioCommand(current: unknown, command: StudioCommand, ses
       createdAt: command.clientTimestamp,
     });
     const options = generateStudioOptions(project);
-    return pairedCanonicalStateSchema.parse({ ...state, stage: "options", options, selectedOptionId: options[0]?.id });
+    return pairedCanonicalStateSchema.parse({ ...state, stage: "options", options, selectedOptionId: options[0]?.id, designRevision: state.designRevision + 1, visualReveal: undefined });
   }
   if (command.type === "select_option") {
     if (!state.options.some((option) => option.id === command.optionId)) throw new Error("Choose an option generated for this session.");
-    return pairedCanonicalStateSchema.parse({ ...state, stage: "refine", selectedOptionId: command.optionId });
+    return pairedCanonicalStateSchema.parse({ ...state, stage: "refine", selectedOptionId: command.optionId, designRevision: state.designRevision + 1, visualReveal: state.visualReveal?.status === "generated" ? { ...state.visualReveal, status: "stale" } : state.visualReveal });
   }
   if (command.type === "request_refinement") {
     if (!state.selectedOptionId) throw new Error("Select a generated direction before refining it.");
@@ -68,7 +68,7 @@ export function applyStudioCommand(current: unknown, command: StudioCommand, ses
     if (applied.receipt.status !== "accepted") throw new Error(applied.receipt.message);
     const committed = { ...proposal, receipt: applied.receipt, status: "committed" as const, decidedAt: command.clientTimestamp, beforeAfterDiff: compareScenes(before, applied.scene) as unknown as Record<string, unknown> };
     const options = [...state.options]; options[optionIndex] = { ...option, scene: applied.scene };
-    return pairedCanonicalStateSchema.parse({ ...state, stage: "refine", options, proposals: state.proposals.map((candidate) => candidate.id === proposal.id ? committed : candidate), receipts: [...state.receipts, committed] });
+    return pairedCanonicalStateSchema.parse({ ...state, stage: "refine", options, designRevision: state.designRevision + 1, visualReveal: state.visualReveal?.status === "generated" ? { ...state.visualReveal, status: "stale" } : state.visualReveal, proposals: state.proposals.map((candidate) => candidate.id === proposal.id ? committed : candidate), receipts: [...state.receipts, committed] });
   }
   if (command.type === "reject_proposal") {
     const proposal = state.proposals.find((candidate) => candidate.id === command.proposalId);
@@ -90,6 +90,10 @@ export function applyStudioCommand(current: unknown, command: StudioCommand, ses
   if (command.type === "select_review_version") {
     if (!state.versions.some((version) => version.id === command.versionId)) throw new Error("Choose a saved canonical version for architect review.");
     return pairedCanonicalStateSchema.parse({ ...state, selectedReviewVersionId: command.versionId });
+  }
+  if (command.type === "request_visual_reveal") {
+    if (!state.source || !state.brief || !state.selectedOptionId) throw new Error("Choose a generated direction before requesting a room reveal.");
+    return pairedCanonicalStateSchema.parse({ ...state, visualReveal: { status: "requested", canonicalRevision: state.designRevision, requestedAt: command.clientTimestamp } });
   }
   if (command.type === "end_session") return pairedCanonicalStateSchema.parse({ ...state, stage: "ended" });
   return state;
