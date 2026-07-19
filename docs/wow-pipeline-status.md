@@ -2,8 +2,8 @@
 
 **Locked baseline:** `7e3a42e`  
 **Deadline:** July 21, 2026, 5:00 pm PT  
-**Current phase:** 7H — provider configuration and production release
-**Status:** Voice/Reveal implementation is locally green under ADR 0002; real-device Supabase and live Nano Banana remain explicit external gates
+**Current phase:** 7H — production release complete in disclosed fallback mode
+**Status:** Exact implementation is deployed and production-tested twice; real-device Supabase and live Nano Banana remain explicit external gates
 
 This is the single implementation ledger for the paired Phone Controller and Studio Wall release. Every phase records its verified commit and evidence before the next phase starts. Scope changes require an ADR under `docs/decisions/`.
 
@@ -22,7 +22,7 @@ This is the single implementation ledger for the paired Phone Controller and Stu
 | 7C–7D | Secure concise ElevenLabs voice and editable intake | Locally complete; live real-phone proof awaits Supabase | `64dd601` | Pinned React SDK; authenticated controller-only signed URL endpoint; rate limiting; consent; lazy runtime mount; independent microphone/output mute; stop and typed fallback; three schema-restricted tools; one combined question; user-owned agent configured with signed auth, patient turn-taking, 12-second timeout, zero retention; signed WebSocket canary passed |
 | 7E | Revision-linked Nano Banana Reveal | Code complete; live generation blocked by Google quota | `64dd601` | Strict controlled brief compiler; direct Gemini provider adapter; authenticated revision/idempotency checks; private render bucket migration; safe events and provenance; wall Source/3D/Reveal triptych; stale state after canonical mutation; model-list canary passed; generation correctly failed with `429 RESOURCE_EXHAUSTED` and quota `0` without canonical mutation |
 | 7F–7G | Voice refinement, comparison, and handoff parity | Locally complete; provider proof pending | `64dd601` | Finalized voice transcript enters the existing checked proposal flow; approval remains explicit and idempotent; Reveal provenance is presentation-only in review JSON; canonical snapshots, factual diff, receipts, review sheet, and deletion remain authoritative; 32 files / 92 tests, lint, strict TypeScript, production build, paired desktop journey green |
-| 7H | UX polish and production release | Local gate complete; production configuration pending | — | Pixel 7 phone and desktop wall screenshots inspected; lazy consent-first voice mount fixed a real browser/runtime defect; 92 tests, zero-warning lint, strict TypeScript, production build, and repository-wide Playwright 12 passed / 8 intentional skips; Vercel configuration, exact-commit deployment, and two production journeys remain |
+| 7H | UX polish and production release | Complete in disclosed same-device/provider-fallback mode | `73ff358` | Pixel 7 phone and desktop wall screenshots inspected; lazy consent-first voice mount fixed a real browser/runtime defect; 92 tests, zero-warning lint, strict TypeScript, production build, repository-wide Playwright 12 passed / 8 intentional skips, npm audit 0; exact-commit Vercel deployment Ready; deployed paired journey passed twice (2 passed / 1 intentional mobile-project skip each run) at `https://interiorin-beta.vercel.app` |
 
 ## Open gate evidence
 
