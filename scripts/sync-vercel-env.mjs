@@ -19,19 +19,18 @@ for (const key of requestedKeys) {
   const value = values.get(key);
   if (!value) throw new Error(`${key} is missing or empty in ${sourcePath}.`);
   const executable = process.platform === "win32" ? "vercel.cmd" : "vercel";
-  spawnSync(executable, ["env", "rm", key, target, "--yes"], {
+  const result = spawnSync(executable, ["env", "add", key, target, "--sensitive", "--force"], {
     cwd: process.cwd(),
-    encoding: "utf8",
-    shell: process.platform === "win32",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  const result = spawnSync(executable, ["env", "add", key, target, "--sensitive"], {
-    cwd: process.cwd(),
-    input: value,
+    // The CLI consumes a line from stdin. Supplying EOF without a newline can
+    // exit successfully without persisting a value on Windows.
+    input: `${value}\n`,
     encoding: "utf8",
     shell: process.platform === "win32",
     stdio: ["pipe", "pipe", "pipe"],
   });
-  if (result.status !== 0) throw new Error(`${key} could not be synchronized: ${(result.stderr || result.stdout).trim()}`);
+  const output = `${result.stdout}\n${result.stderr}`;
+  if (result.status !== 0 || !/(?:Added|Overrode) Environment Variable/i.test(output)) {
+    throw new Error(`${key} could not be synchronized: ${(result.stderr || result.stdout).trim()}`);
+  }
   console.log(`${key}: synchronized`);
 }
