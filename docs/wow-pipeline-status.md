@@ -2,8 +2,8 @@
 
 **Locked baseline:** `7e3a42e`  
 **Deadline:** July 21, 2026, 5:00 pm PT  
-**Current phase:** Release candidate shipped
-**Status:** Credential-free pipeline complete; Supabase cross-device and live-provider verification remain open
+**Current phase:** 7A — bounded voice and visual Reveal scope revision
+**Status:** Credential-free release remains complete; provider-backed hero extension is in progress under ADR 0002
 
 This is the single implementation ledger for the paired Phone Controller and Studio Wall release. Every phase records its verified commit and evidence before the next phase starts. Scope changes require an ADR under `docs/decisions/`.
 
@@ -17,6 +17,7 @@ This is the single implementation ledger for the paired Phone Controller and Stu
 | 5 | Exact named-version comparison | Complete | `1ad9f45` | Named canonical scenes (12-version cap); fixed-camera wall capture with camera restoration; session-only object URLs and cleanup; refresh regeneration from stored scenes; responsive two-version wall; authoritative semantic table and explicit WebGL fallback; phone comparison controls; 27 files / 82 tests; lint; strict TypeScript; production build; paired intake→save A→commit→save B→compare→refresh Playwright passed; wall and phone visuals inspected; secret scan clean |
 | 6 | Selected-design architect handoff | Complete | `ebc9a3b` | Single selected saved scene; wall Review mode; print-ready concept sheet; canonical snapshot fallback; declared envelope; object/surface schedules; provenance/protection; deterministic clearance findings; committed/rejected receipts; open professional checks; mandatory concept-only boundary; matching structured JSON download; 28 files / 83 tests; lint; strict TypeScript; production build; paired selection→Review→JSON parity→print-media Playwright passed; review visual inspected; secret scan clean |
 | 7 | Release verification and deploy readiness | Release complete in disclosed same-device/offline mode | `7b33fc2` | End/delete controls on phone and wall; authenticated Supabase deletion + private source removal; hourly expiry cleanup migration; README/env/Codex Session ID; unused ElevenLabs dependency and 16 transitive packages removed; npm audit 0 vulnerabilities; 28 files / 84 tests; lint; strict TypeScript; production build; repository-wide Playwright 12 passed / 8 intentional skips; production pairing/deletion + full intake/refine/compare/review/export smoke 2 passed; deployed at `https://interiorin-beta.vercel.app`; secret scan clean |
+| 7A | Reopen concise ElevenLabs voice and revision-linked visual Reveal | In progress | — | ADR 0002 accepted; independent voice/reveal feature flags; licensed/demo fixture placement; baseline gate pending |
 
 ## Open gate evidence
 
@@ -26,12 +27,15 @@ This is the single implementation ledger for the paired Phone Controller and Stu
 
 ## Locked cuts
 
-- ElevenLabs
-- Concept rendering in the deadline hero journey
 - Phone-side interactive 3D
 - GLTF and network textures
 - Wall art and chair assets
 - Photogrammetry, accounts, collaboration, telemetry, and state-store refactors
+
+## Reopened under ADR 0002
+
+- Optional, concise ElevenLabs voice with typed parity and no mutation authority
+- Explicit Nano Banana presentation Reveal linked to canonical revision and disclosed as unmeasured
 
 ## Every-phase gate
 

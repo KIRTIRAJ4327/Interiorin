@@ -6,5 +6,6 @@ export const productFeatures = Object.freeze({
   liveRefinement: enabled(process.env.ENABLE_LIVE_OPENAI),
   conceptRender: enabled(process.env.NEXT_PUBLIC_ENABLE_CONCEPT_RENDER),
   phone3dPreview: enabled(process.env.NEXT_PUBLIC_ENABLE_PHONE_3D_PREVIEW),
+  voiceGuide: enabled(process.env.NEXT_PUBLIC_ENABLE_VOICE_GUIDE, true),
+  visualReveal: enabled(process.env.NEXT_PUBLIC_ENABLE_VISUAL_REVEAL, true),
 });
-
