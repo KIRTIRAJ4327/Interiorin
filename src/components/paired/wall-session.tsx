@@ -58,6 +58,10 @@ export function WallSession({ sessionId }: { sessionId: string }) {
         initialModeRecoveredRef.current = true;
         if (nextCanonical.comparison) setWallMode("compare");
       }
+      const latestEvent = snapshot.events.at(-1);
+      if (latestEvent?.eventType === "review_version_selected") setWallMode("review");
+      if (latestEvent?.eventType === "comparison_selected") setWallMode("compare");
+      if (latestEvent?.eventType === "visual_reveal_generated") setWallMode("reveal");
       const paired = snapshot.members.some((member) => member.role === "controller");
       setConnection(paired ? "paired" : "waiting");
       setMessage(wallProgressMessage(nextCanonical, paired));

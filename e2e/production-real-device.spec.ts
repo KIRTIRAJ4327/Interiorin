@@ -6,7 +6,7 @@ test("a separately authenticated phone synchronizes intake and design with the p
   await page.goto("/wall");
   await page.getByRole("button", { name: "Create Studio Wall" }).click();
   await expect(page).toHaveURL(/\/wall\/[0-9a-f-]+$/);
-  await expect(page.getByText(/Private paired session|Authenticated phone/i)).toBeVisible();
+  await expect(page.locator(".privacy-line")).toContainText("Private paired session");
 
   const storedSession = await page.evaluate(() => {
     const sessionId = location.pathname.split("/").at(-1);

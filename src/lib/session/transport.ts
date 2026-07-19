@@ -155,7 +155,13 @@ export class SupabaseSessionTransport implements SessionTransport {
       headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify(command),
     });
-    if (!response.ok) throw new Error((await response.json()).error ?? "Command failed.");
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error ?? "Command failed.");
+    if (body.event && this.channel) {
+      // The server returns a schema-safe committed event. Broadcast only that
+      // receipt; canonical state is always recovered from the server.
+      void this.channel.send({ type: "broadcast", event: "studio_event", payload: body.event });
+    }
   }
 
   subscribe(listener: (event: StudioEvent) => void) {
