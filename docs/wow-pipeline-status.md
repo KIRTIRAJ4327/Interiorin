@@ -2,8 +2,8 @@
 
 **Locked baseline:** `7e3a42e`  
 **Deadline:** July 21, 2026, 5:00 pm PT  
-**Current phase:** Phase 7 — release verification and deploy readiness
-**Status:** Phase 6 complete; production Supabase verification remains open
+**Current phase:** Release candidate shipped
+**Status:** Credential-free pipeline complete; Supabase cross-device and live-provider verification remain open
 
 This is the single implementation ledger for the paired Phone Controller and Studio Wall release. Every phase records its verified commit and evidence before the next phase starts. Scope changes require an ADR under `docs/decisions/`.
 
@@ -16,12 +16,13 @@ This is the single implementation ledger for the paired Phone Controller and Stu
 | 4 | Checked refinement and Decision Trace | Complete | `2e13d10` | Local-first interpretation; gated `/api/refine`; capped scene context; validated IDs/variants; deterministic receipts; phone approval/rejection; atomic revision + event RPC; sanitized wall trace; accepted/rejected/fallback no-mutation browser proof; 27 files / 81 tests; production build; paired Playwright 3 passed / 3 intentional skips |
 | 5 | Exact named-version comparison | Complete | `1ad9f45` | Named canonical scenes (12-version cap); fixed-camera wall capture with camera restoration; session-only object URLs and cleanup; refresh regeneration from stored scenes; responsive two-version wall; authoritative semantic table and explicit WebGL fallback; phone comparison controls; 27 files / 82 tests; lint; strict TypeScript; production build; paired intake→save A→commit→save B→compare→refresh Playwright passed; wall and phone visuals inspected; secret scan clean |
 | 6 | Selected-design architect handoff | Complete | `ebc9a3b` | Single selected saved scene; wall Review mode; print-ready concept sheet; canonical snapshot fallback; declared envelope; object/surface schedules; provenance/protection; deterministic clearance findings; committed/rejected receipts; open professional checks; mandatory concept-only boundary; matching structured JSON download; 28 files / 83 tests; lint; strict TypeScript; production build; paired selection→Review→JSON parity→print-media Playwright passed; review visual inspected; secret scan clean |
-| 7 | Release verification and deploy readiness | In progress | — | — |
+| 7 | Release verification and deploy readiness | Release complete in disclosed same-device/offline mode | `7b33fc2` | End/delete controls on phone and wall; authenticated Supabase deletion + private source removal; hourly expiry cleanup migration; README/env/Codex Session ID; unused ElevenLabs dependency and 16 transitive packages removed; npm audit 0 vulnerabilities; 28 files / 84 tests; lint; strict TypeScript; production build; repository-wide Playwright 12 passed / 8 intentional skips; production pairing/deletion + full intake/refine/compare/review/export smoke 2 passed; deployed at `https://interiorin-beta.vercel.app`; secret scan clean |
 
 ## Open gate evidence
 
-- Production Supabase project credentials are not configured in this workspace, so anonymous Auth, private Realtime membership, Storage RLS, token reuse rejection, and real-phone cross-device recovery are implemented but not yet verified against a deployed project.
-- The product therefore activates and visibly labels same-device demo mode. This is a configuration dependency, not a claimed cloud pass; Phase 2 proceeds without coupling canonical room work to the external project.
+- Production Supabase project credentials are not configured in this workspace, so anonymous Auth, private Realtime membership, Storage RLS, expiry cleanup, token reuse rejection, and real-phone cross-device recovery are implemented but not yet verified against a deployed project.
+- Live OpenAI credentials plus a genuine exact-model canary response ID are not configured, so the deployed release uses the disclosed deterministic parser/fallback and does not claim a live-provider pass.
+- Production therefore visibly labels same-device demo mode. The complete fallback journey is deployed and production-smoke-tested; these are external configuration gates, not hidden passes.
 
 ## Locked cuts
 
