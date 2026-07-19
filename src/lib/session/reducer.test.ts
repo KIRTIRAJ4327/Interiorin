@@ -16,6 +16,8 @@ describe("paired canonical reducer", () => {
     expect(state.stage).toBe("options");
 
     state = applyStudioCommand(state, { ...common, type: "select_option", optionId: state.options[0]!.id }, crypto.randomUUID());
+    const firstVersionId = crypto.randomUUID();
+    state = applyStudioCommand(state, { ...common, idempotencyKey: firstVersionId, type: "save_version", name: "Conversation base" }, crypto.randomUUID());
     const before = state.options[0]!.scene.objects.find((object) => object.id === "table")!.transform.position.x;
     const parsed = parseStudioRefinement(state.options[0]!.scene, "Move the table right 30 cm");
     expect(parsed.status).toBe("ready");
@@ -27,5 +29,17 @@ describe("paired canonical reducer", () => {
     state = applyStudioCommand(state, { ...common, type: "confirm_proposal", proposalId }, crypto.randomUUID());
     expect(state.proposals.at(-1)?.status).toBe("committed");
     expect(state.options[0]!.scene.objects.find((object) => object.id === "table")!.transform.position.x).toBeCloseTo(before + 0.3);
+    const secondVersionId = crypto.randomUUID();
+    state = applyStudioCommand(state, { ...common, idempotencyKey: secondVersionId, type: "save_version", name: "Table shifted" }, crypto.randomUUID());
+    state = applyStudioCommand(state, { ...common, type: "select_comparison", firstVersionId, secondVersionId }, crypto.randomUUID());
+    expect(state.versions).toHaveLength(2);
+    expect(state.versions[0]?.scene.objects.find((object) => object.id === "table")?.transform.position.x).toBe(before);
+    expect(state.versions[1]?.scene.objects.find((object) => object.id === "table")?.transform.position.x).toBeCloseTo(before + 0.3);
+    expect(state.comparison).toEqual({ firstVersionId, secondVersionId });
+  });
+
+  it("rejects comparison against an unknown or identical saved version", () => {
+    const versionId = crypto.randomUUID();
+    expect(() => applyStudioCommand({ versions: [] }, { ...common, type: "select_comparison", firstVersionId: versionId, secondVersionId: crypto.randomUUID() }, crypto.randomUUID())).toThrow("Choose two different saved versions");
   });
 });

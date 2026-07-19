@@ -46,6 +46,7 @@ export const pairedProposalSchema = z.object({
   beforeAfterDiff: z.record(z.string(), z.unknown()).optional(), createdAt: z.string().datetime(), decidedAt: z.string().datetime().optional(),
 });
 export type PairedProposal = z.infer<typeof pairedProposalSchema>;
+export const pairedVersionSchema = z.object({ id: z.string().min(1), name: z.string().trim().min(1).max(40), optionId: z.string().min(1), scene: studioOptionSchema.shape.scene, createdAt: z.string().datetime() });
 
 export const pairedCanonicalStateSchema = z.object({
   stage: z.enum(["space", "brief", "options", "refine", "approve", "ended"]).default("space"),
@@ -62,6 +63,8 @@ export const pairedCanonicalStateSchema = z.object({
   selectedOptionId: z.string().optional(),
   proposals: z.array(pairedProposalSchema).max(20).default([]),
   receipts: z.array(pairedProposalSchema).max(20).default([]),
+  versions: z.array(pairedVersionSchema).max(12).default([]),
+  comparison: z.object({ firstVersionId: z.string(), secondVersionId: z.string() }).optional(),
 });
 
 export type PairedCanonicalState = z.infer<typeof pairedCanonicalStateSchema>;

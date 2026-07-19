@@ -86,6 +86,9 @@ test("phone intake generates the same canonical options on the Studio Wall", asy
     return option.scene.objects.find((object: { id: string }) => object.id === "table").transform.position.x as number;
   });
   const beforeX = await tableX();
+  await phone.getByRole("textbox", { name: "Version name" }).fill("Conversation base");
+  await phone.getByRole("button", { name: "Save version" }).click();
+  await expect(phone.getByText("Conversation base", { exact: true })).toBeVisible();
   await phone.getByRole("textbox", { name: "Refinement request" }).fill("Move the table right 30 cm");
   await phone.getByRole("button", { name: "Check proposed change" }).click();
   await expect(phone.getByRole("heading", { name: "Approve only the checked action." })).toBeVisible();
@@ -96,6 +99,16 @@ test("phone intake generates the same canonical options on the Studio Wall", asy
   await expect(page.getByText("committed", { exact: true })).toBeVisible();
   expect(await tableX()).toBeCloseTo(beforeX + 0.3, 5);
   const committedX = await tableX();
+  await phone.getByRole("textbox", { name: "Version name" }).fill("Table shifted");
+  await phone.getByRole("button", { name: "Save version" }).click();
+  await expect(phone.locator(".phone-versions li").filter({ hasText: "Table shifted" })).toBeVisible();
+  await phone.getByRole("button", { name: "Compare on wall" }).click();
+  await expect(page.getByRole("heading", { name: "Conversation base versus Table shifted" })).toBeVisible();
+  await expect(page.getByRole("table", { name: "Authoritative scene changes from Conversation base to Table shifted" })).toContainText("Moved");
+  await expect(page.locator(".wall-compare figure")).toHaveCount(2);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Conversation base versus Table shifted" })).toBeVisible();
+  await expect(page.getByRole("table", { name: "Authoritative scene changes from Conversation base to Table shifted" })).toContainText("Moved");
   await phone.getByRole("textbox", { name: "Refinement request" }).fill("Move the table right 10 m");
   await phone.getByRole("button", { name: "Check proposed change" }).click();
   await expect(phone.locator(".phone-proposal[data-status='rejected']")).toContainText("outside the entered space envelope");

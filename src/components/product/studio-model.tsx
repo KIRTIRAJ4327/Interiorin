@@ -3,11 +3,13 @@
 import { ContactShadows, Edges, OrbitControls } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Minus, MousePointer2, Plus, RotateCcw, RotateCw, Rows3, X } from "lucide-react";
-import { Component, useEffect, useMemo, useState, type ErrorInfo, type ReactNode } from "react";
+import { Component, forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState, type ErrorInfo, type MutableRefObject, type ReactNode } from "react";
 import type { SceneAction, SceneObject, SpatialScene } from "@/lib/spatial/schema";
 import { proceduralAssetFamily } from "@/lib/spatial/assets";
 
 type CameraPosition = [number, number, number];
+export type StudioModelHandle = { captureCanonical(): Promise<Blob | null> };
+type CaptureFunction = () => Promise<Blob | null>;
 
 const objectColors: Record<SceneObject["category"], string> = {
   seating: "#8a6e52",
@@ -150,15 +152,39 @@ function CameraSync({ position, target }: { position: CameraPosition; target: Ca
   return null;
 }
 
-function Model({ scene, cameraPosition, target, width, depth, height, selectedObjectId, onSelectObject }: {
+function CaptureBridge({ captureRef, position, target }: { captureRef: MutableRefObject<CaptureFunction | null>; position: CameraPosition; target: CameraPosition }) {
+  const { camera, gl, scene } = useThree();
+  useEffect(() => {
+    captureRef.current = async () => {
+      const savedPosition = camera.position.clone();
+      const savedQuaternion = camera.quaternion.clone();
+      const savedZoom = camera.zoom;
+      camera.position.set(...position); camera.lookAt(...target); camera.updateProjectionMatrix();
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      gl.render(scene, camera);
+      let blob = await new Promise<Blob | null>((resolve) => gl.domElement.toBlob(resolve, "image/png"));
+      if (!blob) {
+        try { blob = await fetch(gl.domElement.toDataURL("image/png")).then((response) => response.blob()); } catch { blob = null; }
+      }
+      camera.position.copy(savedPosition); camera.quaternion.copy(savedQuaternion); camera.zoom = savedZoom; camera.updateProjectionMatrix(); gl.render(scene, camera);
+      return blob;
+    };
+    return () => { captureRef.current = null; };
+  }, [camera, captureRef, gl, position, scene, target]);
+  return null;
+}
+
+function Model({ scene, cameraPosition, capturePosition, target, width, depth, height, selectedObjectId, onSelectObject, captureRef }: {
   scene: SpatialScene;
   cameraPosition: CameraPosition;
+  capturePosition: CameraPosition;
   target: CameraPosition;
   width: number;
   depth: number;
   height: number;
   selectedObjectId: string;
   onSelectObject: (objectId: string) => void;
+  captureRef: MutableRefObject<CaptureFunction | null>;
 }) {
   const environment = scene.environment ?? { warmth: "neutral" as const, intensity: "normal" as const };
   const background = environment.warmth === "warm" ? "#ead8c0" : environment.warmth === "cool" ? "#d9e3e5" : scene.kind === "interior" ? "#e8e0d3" : "#dfe3d5";
@@ -168,6 +194,7 @@ function Model({ scene, cameraPosition, target, width, depth, height, selectedOb
   return (
     <>
       <CameraSync position={cameraPosition} target={target} />
+      <CaptureBridge captureRef={captureRef} position={capturePosition} target={target} />
       <color attach="background" args={[background]} />
       <hemisphereLight intensity={environment.intensity === "dim" ? 0.45 : 0.95} color={environment.warmth === "warm" ? "#ffd8ae" : environment.warmth === "cool" ? "#d9efff" : "#ffffff"} />
       <directionalLight position={[width * 0.75, Math.max(6, height * 2), depth * 0.85]} intensity={lightIntensity} color={environment.warmth === "warm" ? "#ffcf9f" : environment.warmth === "cool" ? "#d8edff" : "#ffffff"} castShadow />
@@ -197,7 +224,7 @@ function Model({ scene, cameraPosition, target, width, depth, height, selectedOb
   );
 }
 
-export function StudioModel({ scene, onDirectAction }: { scene: SpatialScene; onDirectAction?: (action: SceneAction, summary: string) => void }) {
+export const StudioModel = forwardRef<StudioModelHandle, { scene: SpatialScene; onDirectAction?: (action: SceneAction, summary: string) => void }>(function StudioModel({ scene, onDirectAction }, ref) {
   const [semanticOpen, setSemanticOpen] = useState(false);
   const [selectedObjectId, setSelectedObjectId] = useState("");
   const bounds = useMemo(() => {
@@ -213,6 +240,8 @@ export function StudioModel({ scene, onDirectAction }: { scene: SpatialScene; on
   const target = useMemo<CameraPosition>(() => [bounds.width / 2, Math.min(1.1, bounds.height * 0.3), bounds.depth / 2], [bounds]);
   const initialCamera = useMemo<CameraPosition>(() => [bounds.width * 1.18, Math.max(4.5, bounds.height * 1.6), bounds.depth * 1.7], [bounds]);
   const [cameraPosition, setCameraPosition] = useState<CameraPosition>(initialCamera);
+  const captureRef = useRef<CaptureFunction | null>(null);
+  useImperativeHandle(ref, () => ({ captureCanonical: () => captureRef.current?.() ?? Promise.resolve(null) }), []);
   const selectedObject = scene.objects.find((object) => object.id === selectedObjectId);
 
   function rotate() {
@@ -256,8 +285,8 @@ export function StudioModel({ scene, onDirectAction }: { scene: SpatialScene; on
         <button type="button" onClick={() => setSemanticOpen((current) => !current)} aria-expanded={semanticOpen} aria-label="Open model facts"><Rows3 aria-hidden="true" size={18} /></button>
       </div>
       <ProductModelBoundary scene={scene}>
-        <Canvas role="img" aria-label={`User-controlled 3D ${scene.kind} model for ${scene.name}`} shadows camera={{ position: initialCamera, fov: 40, near: 0.1, far: 120 }} dpr={[1, 1.5]} onPointerMissed={() => setSelectedObjectId("")}>
-          <Model scene={scene} cameraPosition={cameraPosition} target={target} selectedObjectId={selectedObjectId} onSelectObject={setSelectedObjectId} {...bounds} />
+        <Canvas role="img" aria-label={`User-controlled 3D ${scene.kind} model for ${scene.name}`} shadows gl={{ preserveDrawingBuffer: true }} camera={{ position: initialCamera, fov: 40, near: 0.1, far: 120 }} dpr={[1, 1.5]} onPointerMissed={() => setSelectedObjectId("")}>
+          <Model scene={scene} cameraPosition={cameraPosition} capturePosition={initialCamera} target={target} selectedObjectId={selectedObjectId} onSelectObject={setSelectedObjectId} captureRef={captureRef} {...bounds} />
         </Canvas>
       </ProductModelBoundary>
       {onDirectAction ? <div className="product-object-editor" aria-label="Direct 3D object controls">
@@ -279,7 +308,7 @@ export function StudioModel({ scene, onDirectAction }: { scene: SpatialScene; on
       <p className="product-model-help">User-controlled view · semantic facts remain available · no survey claim</p>
     </div>
   );
-}
+});
 
 function SceneFacts({ scene, bounds }: { scene: SpatialScene; bounds: { width: number; depth: number; height: number } }) {
   return (

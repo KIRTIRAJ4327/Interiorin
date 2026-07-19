@@ -76,6 +76,17 @@ export function applyStudioCommand(current: unknown, command: StudioCommand, ses
     const rejected = { ...proposal, status: "rejected" as const, decidedAt: command.clientTimestamp };
     return pairedCanonicalStateSchema.parse({ ...state, stage: "refine", proposals: state.proposals.map((candidate) => candidate.id === proposal.id ? rejected : candidate), receipts: [...state.receipts, rejected] });
   }
+  if (command.type === "save_version") {
+    if (state.versions.length >= 12) throw new Error("This session reached its 12-version limit.");
+    const option = state.options.find((candidate) => candidate.id === state.selectedOptionId);
+    if (!option) throw new Error("Select a canonical direction before saving a version.");
+    const version = { id: command.idempotencyKey, name: command.name, optionId: option.id, scene: structuredClone(option.scene), createdAt: command.clientTimestamp };
+    return pairedCanonicalStateSchema.parse({ ...state, versions: [...state.versions, version] });
+  }
+  if (command.type === "select_comparison") {
+    if (command.firstVersionId === command.secondVersionId || !state.versions.some((version) => version.id === command.firstVersionId) || !state.versions.some((version) => version.id === command.secondVersionId)) throw new Error("Choose two different saved versions from this session.");
+    return pairedCanonicalStateSchema.parse({ ...state, comparison: { firstVersionId: command.firstVersionId, secondVersionId: command.secondVersionId } });
+  }
   if (command.type === "end_session") return pairedCanonicalStateSchema.parse({ ...state, stage: "ended" });
   return state;
 }
