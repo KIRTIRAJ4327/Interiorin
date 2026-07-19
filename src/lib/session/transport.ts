@@ -10,6 +10,7 @@ export interface SessionTransport {
   sendCommand(command: StudioCommand): Promise<void>;
   subscribe(listener: (event: StudioEvent) => void): () => void;
   recover(afterEventId?: number): Promise<StudioSnapshot>;
+  deleteSession(): Promise<void>;
   dispose(): Promise<void>;
 }
 
@@ -57,6 +58,12 @@ export class BroadcastChannelSessionTransport implements SessionTransport {
     this.channel?.close();
     this.channel = null;
     this.listeners.clear();
+  }
+
+  async deleteSession() {
+    localStorage.removeItem(this.storageKey);
+    localStorage.removeItem(`interiorin:mode:${this.sessionId}`);
+    localStorage.removeItem(`interiorin:joined:${this.sessionId}`);
   }
 
   private publish(eventType: StudioEvent["eventType"], payload: Record<string, unknown>, canonicalState?: Record<string, unknown>, revision?: number) {
@@ -168,6 +175,14 @@ export class SupabaseSessionTransport implements SessionTransport {
     if (client && this.channel) await client.removeChannel(this.channel);
     this.channel = null;
     this.listeners.clear();
+  }
+
+  async deleteSession() {
+    const token = await getAnonymousAccessToken();
+    const response = await fetch(`/api/sessions/${this.sessionId}`, { method: "DELETE", headers: token ? { authorization: `Bearer ${token}` } : {} });
+    if (!response.ok && response.status !== 404) throw new Error((await response.json()).error ?? "Session deletion failed.");
+    localStorage.removeItem(`interiorin:mode:${this.sessionId}`);
+    localStorage.removeItem(`interiorin:joined:${this.sessionId}`);
   }
 }
 

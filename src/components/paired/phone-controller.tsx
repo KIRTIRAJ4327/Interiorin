@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { BookmarkPlus, Camera, Check, ChevronRight, Columns2, LoaderCircle, LockKeyhole, Mic, Ruler, ShieldCheck } from "lucide-react";
+import { BookmarkPlus, Camera, Check, ChevronRight, Columns2, LoaderCircle, LockKeyhole, Mic, Ruler, ShieldCheck, Trash2 } from "lucide-react";
 import { getAnonymousAccessToken, getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { normalizeRoomPhoto } from "@/lib/session/photo";
 import { pairedCanonicalStateSchema, refinementInterpretationSchema, sessionJoinEnvelopeSchema, type PairedCanonicalState, type SessionJoinEnvelope, type StudioCommand } from "@/lib/session/schema";
@@ -219,13 +219,25 @@ export function PhoneController({ sessionId, token, requestedMode }: { sessionId
     finally { setBusy(""); }
   }
 
+  async function endSession() {
+    if (!window.confirm("End this session and delete its stored room source and canonical state?")) return;
+    setBusy("Deleting session…"); setError("");
+    try {
+      const ended = await send({ type: "end_session" });
+      await transportRef.current?.deleteSession();
+      setState({ ...ended, stage: "ended" });
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Session could not be deleted."); }
+    finally { setBusy(""); }
+  }
+
   if (status === "joining") return <PhoneStatus icon={<LoaderCircle className="spin" />} title="Pairing securely…" detail="Authenticating this phone and claiming the one-time controller seat." />;
   if (status === "error") return <PhoneStatus icon={<LockKeyhole />} title="This phone could not join." detail={error} error />;
+  if (state.stage === "ended") return <PhoneStatus icon={<Check />} title="Session deleted." detail="The room source and canonical session state are no longer available from this controller." />;
   const currentStage = state.stage === "space" ? "Space" : state.stage === "brief" ? "Brief" : state.stage === "options" ? "Options" : state.stage === "approve" ? "Approve" : "Refine";
   const currentProposal = state.proposals.at(-1);
 
   return <main className="phone-shell" id="main-content">
-    <header className="phone-header"><div><p className="eyebrow">Interiorin controller</p><strong>{currentStage}</strong></div><span className="phone-connection"><Check aria-hidden="true" /> Paired</span></header>
+    <header className="phone-header"><div><p className="eyebrow">Interiorin controller</p><strong>{currentStage}</strong></div><span className="phone-connection"><Check aria-hidden="true" /> Paired</span><button type="button" className="phone-end-session" onClick={() => void endSession()} disabled={Boolean(busy)} aria-label="End and delete session"><Trash2 aria-hidden="true" /></button></header>
     <div className="phone-progress" aria-label="Journey progress">{["Space", "Brief", "Options", "Refine", "Approve"].map((label) => <span key={label} className={label === currentStage ? "is-current" : ""}>{label}</span>)}</div>
     {state.stage === "space" ? <section className="phone-stage" aria-labelledby="phone-title">
       <p className="eyebrow">Step 1 of 5 · Space</p><h1 id="phone-title">Show us the room. You keep control of the facts.</h1>

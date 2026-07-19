@@ -15,7 +15,7 @@ export async function POST(request: Request, { params }: Context) {
   if (!user || !admin) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
 
   const { data: member } = await admin.from("studio_members").select("role").eq("session_id", sessionId).eq("user_id", user.id).maybeSingle();
-  if (!member || member.role !== "controller") return NextResponse.json({ error: "Controller membership required." }, { status: 403 });
+  if (!member || (member.role !== "controller" && parsed.data.type !== "end_session")) return NextResponse.json({ error: "Controller membership required for this command." }, { status: 403 });
   const { data: duplicate } = await admin.from("studio_events").select("id,payload").eq("session_id", sessionId).eq("idempotency_key", parsed.data.idempotencyKey).maybeSingle();
   if (duplicate) return NextResponse.json({ duplicate: true, eventId: Number(duplicate.id), receipt: duplicate.payload });
 

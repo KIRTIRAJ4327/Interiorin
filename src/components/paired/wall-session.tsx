@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Check, CircleAlert, Download, Link2, Printer, Radio, ScanLine, ShieldCheck } from "lucide-react";
+import { Check, CircleAlert, Download, Link2, Printer, Radio, ScanLine, ShieldCheck, Trash2 } from "lucide-react";
 import { pairedCanonicalStateSchema, type PairedCanonicalState, type SessionCreateEnvelope, type StudioEvent } from "@/lib/session/schema";
-import { createSessionTransport } from "@/lib/session/transport";
+import { createSessionTransport, type SessionTransport } from "@/lib/session/transport";
 import { StudioModel, type StudioModelHandle } from "@/components/product/studio-model";
 import { compareScenes } from "@/lib/spatial/diff";
 import { validateScene } from "@/lib/spatial/validation";
@@ -28,11 +28,13 @@ export function WallSession({ sessionId }: { sessionId: string }) {
   const [captureVersionId, setCaptureVersionId] = useState("");
   const snapshotUrlsRef = useRef<Record<string, string>>({});
   const initialModeRecoveredRef = useRef(false);
+  const transportRef = useRef<SessionTransport | null>(null);
 
   const mode = useMemo(() => session?.mode ?? (typeof window === "undefined" ? "same_device" : (localStorage.getItem(`interiorin:mode:${sessionId}`) as "supabase" | "same_device" | null) ?? "same_device"), [session, sessionId]);
 
   useEffect(() => {
     const transport = createSessionTransport(mode, sessionId, "wall");
+    transportRef.current = transport;
     let mounted = true;
     async function recover() {
       const snapshot = await transport.recover().catch(() => null);
@@ -51,6 +53,10 @@ export function WallSession({ sessionId }: { sessionId: string }) {
     const unsubscribe = transport.subscribe((event) => {
       if (!mounted) return;
       setEvents((current) => [...current.filter((item) => item.id !== event.id), event].slice(-12));
+      if (event.eventType === "session_ended") {
+        setCanonical((current) => pairedCanonicalStateSchema.parse({ ...current, stage: "ended" }));
+        return;
+      }
       if (event.eventType === "controller_joined") {
         setConnection("paired");
         setMessage("Phone controller authenticated. The wall is ready for room intake.");
@@ -68,7 +74,7 @@ export function WallSession({ sessionId }: { sessionId: string }) {
       setMessage(cause instanceof Error ? cause.message : "The session channel could not connect.");
     });
     const poll = mode === "supabase" ? window.setInterval(() => void recover(), 1800) : undefined;
-    return () => { mounted = false; if (poll) window.clearInterval(poll); unsubscribe(); void transport.dispose(); };
+    return () => { mounted = false; transportRef.current = null; if (poll) window.clearInterval(poll); unsubscribe(); void transport.dispose(); };
   }, [mode, sessionId]);
 
   const joined = connection === "paired";
@@ -99,12 +105,26 @@ export function WallSession({ sessionId }: { sessionId: string }) {
     }
     setCaptureVersionId("");
   }
+
+  async function endSession() {
+    if (!window.confirm("End this session and delete its stored room source and canonical state?")) return;
+    const transport = transportRef.current;
+    if (!transport) return;
+    try {
+      const snapshot = await transport.recover();
+      await transport.sendCommand({ type: "end_session", idempotencyKey: crypto.randomUUID(), expectedRevision: snapshot.revision, clientTimestamp: new Date().toISOString() });
+      await transport.deleteSession();
+      setCanonical((current) => pairedCanonicalStateSchema.parse({ ...current, stage: "ended" }));
+    } catch (cause) { setConnection("error"); setMessage(cause instanceof Error ? cause.message : "Session could not be deleted."); }
+  }
+
+  if (canonical.stage === "ended") return <main className="wall-ended" id="main-content"><div><Check aria-hidden="true" /><p className="eyebrow">Session deleted</p><h1>This room has left the wall.</h1><p>The stored source and canonical session state are no longer available. Start a new Studio Wall when you are ready.</p><Link href="/wall">Create another wall</Link></div></main>;
   return (
     <main className="wall-shell" id="main-content">
       <header className="wall-header">
         <Link className="wordmark" href="/wall">Interiorin</Link>
         <span className={`connection-pill connection-pill--${connection}`}><Radio size={16} aria-hidden="true" /> {joined ? "Phone paired" : connection}</span>
-        <Link className="paired-text-link" href="/studio">Combined studio</Link>
+        <div className="wall-header-actions"><Link className="paired-text-link" href="/studio">Combined studio</Link><button type="button" onClick={() => void endSession()} aria-label="End and delete session"><Trash2 aria-hidden="true" /></button></div>
       </header>
       {canonical.options.length && selectedOption ? <section className="wall-product" aria-labelledby="wall-options-title">
         <div className="wall-modebar"><div><p className="eyebrow">Canonical room · revision synchronized</p><h1 id="wall-options-title">{wallMode === "compare" ? "Version comparison" : wallMode === "review" ? "Architect review" : selectedOption.name}</h1></div><div role="group" aria-label="Wall mode"><button aria-pressed={wallMode === "explore"} onClick={() => setWallMode("explore")}>Explore</button><button aria-pressed={wallMode === "model"} onClick={() => setWallMode("model")}>Model</button>{canonical.comparison ? <button aria-pressed={wallMode === "compare"} onClick={() => setWallMode("compare")}>Compare</button> : null}{reviewVersion ? <button aria-pressed={wallMode === "review"} onClick={() => setWallMode("review")}>Review</button> : null}</div></div>

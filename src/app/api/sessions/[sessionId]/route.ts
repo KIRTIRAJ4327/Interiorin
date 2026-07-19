@@ -31,3 +31,20 @@ export async function GET(request: Request, { params }: Context) {
     expiresAt: session.expires_at,
   });
 }
+
+export async function DELETE(request: Request, { params }: Context) {
+  const { sessionId } = await params;
+  const user = await authenticateAccessToken(bearerToken(request));
+  const admin = getSupabaseAdmin();
+  if (!user || !admin) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+  const { data: membership } = await admin.from("studio_members").select("role").eq("session_id", sessionId).eq("user_id", user.id).maybeSingle();
+  if (!membership) return NextResponse.json({ error: "Session membership required." }, { status: 403 });
+  const { data: session } = await admin.from("studio_sessions").select("canonical_state").eq("id", sessionId).maybeSingle();
+  if (!session) return NextResponse.json({ deleted: true });
+  const canonical = session.canonical_state as { source?: { objectPath?: string } } | null;
+  const objectPath = canonical?.source?.objectPath;
+  if (objectPath && !objectPath.startsWith("local/")) await admin.storage.from("studio-sources").remove([objectPath]);
+  const { error } = await admin.from("studio_sessions").delete().eq("id", sessionId);
+  if (error) return NextResponse.json({ error: "Session deletion failed." }, { status: 500 });
+  return NextResponse.json({ deleted: true });
+}

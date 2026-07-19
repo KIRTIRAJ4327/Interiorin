@@ -1,31 +1,33 @@
 # Interiorin
 
-Interiorin is an evidence-aware spatial design studio for real interior and exterior spaces. The product now includes a dimension-driven Studio for turning an entered space envelope into three reasoned, interactive directions, while preserving the original authority proof as a deeper technical demonstration.
+Interiorin is a paired, evidence-aware spatial design studio for interior concepts. A phone captures the homeowner’s room and intent; a laptop Studio Wall presents three canonical 3D directions, shows a transparent Decision Trace for every refinement, compares named versions, and exports one selected architect concept-review package.
 
-## What works now
+**Authority line:** AI interprets intent. Interiorin’s typed schemas, entered dimensions, deterministic spatial checks, and explicit user approval control every canonical mutation.
 
-- Guided interior/exterior intake for empty or existing spaces, with user-entered width, depth, height, intent, and an optional image/PDF source.
-- Credential-gated Gemini visual analysis that identifies visible openings, retained objects, light, and style cues as confidence-scored, non-metric evidence; provider failure is disclosed and never blocks dimension-driven generation.
-- Three materially distinct, deterministic spatial options generated from the entered envelope, each with rationale and tradeoffs.
-- Rotation-aware footprint validation of every option and committed state: full-object envelope checks, object-overlap detection, and measured clearance review—not center-point-only checks.
-- A canonical interactive 3D workbench with mouse/touch controls and an always-available semantic facts view.
-- Direct 3D object selection with accessible 100 mm nudge and 15° rotation controls; every click uses the same checked canonical action, receipt, history, validation, and handoff path as voice.
-- Optional Nano Banana in-space presentation concepts generated from the source photograph and current canonical option, clearly separated from the measured/evidence-aware 3D record.
-- Bounded browser voice transcription or typed refinement for movement, surface material, retained-object protection, lighting warmth/intensity, and undo; every command compiles to a visible typed action and commits only after explicit confirmation.
-- Rejected mutations for protected existing objects, plus persistent action receipts.
-- Named local versions, factual scene comparison, and an architect/designer review package exported as JSON with sources, limitations, and open questions.
-- Version comparison includes movement, rotation, material, protection, replacement, lighting, and constraint deltas; handoff includes per-version spatial validation findings.
-- Blocking exterior review needs—including property boundary, survey, setbacks, utilities, grade, and drainage—kept visible in the workbench and handoff.
-- A prepared, calibrated dining-room scene rendered as interactive 3D with an always-available numeric fallback.
-- A typed 40 cm table-move proposal, clarified through GPT-5.6 Terra when configured or through a visibly labelled deterministic offline parser.
-- A fail-closed authority gate: the visually estimated bookcase width produces `confirmation_required` and exposes no maximum-valid alternative.
-- A scoped homeowner measurement that changes the supporting fact from `observed_unverified` to `user_declared` without changing geometry or the transaction.
-- Browser SHA-256 proof that geometry and transaction bytes match while the allowlisted authority field changes.
-- An integer-millimetre edge-clearance solver that limits the requested 400 mm move to a checked 180 mm alternative.
-- Explicit commit and in-session receipt with the requested and committed actions kept distinct.
-- Desktop and mobile browser rehearsal of the complete offline causal path.
+This is concept decision support. It is not a survey, field measurement, code review, architectural drawing set, engineering, permit package, procurement verification, or construction documentation.
 
-This is early decision support under a demo-authored, unendorsed policy. It is not survey, code, structural, or construction certification.
+## Locked hackathon journey
+
+1. Open `/wall` on the laptop and create a session.
+2. Scan the QR code with the phone, or use the disclosed same-device controller link.
+3. Capture one room photo, enter width/depth/height, and answer the four guided text or push-to-talk questions.
+4. Confirm retained objects. Photo analysis may suggest visible cues; entered dimensions remain the only metric authority.
+5. Review three deterministic furnished directions on the Studio Wall and select one from the phone.
+6. Speak or type a refinement. The wall displays the sanitized Decision Trace, typed proposal, identifier/protection/envelope/overlap/clearance checks, and disclosed provider mode.
+7. Approve or reject on the phone. Accepted changes commit exactly once and produce a receipt.
+8. Save two named canonical versions, compare exact wall views plus the authoritative factual diff, and recover the comparison after refresh.
+9. Select one version for architect review, print/save the concept sheet, and download matching structured JSON.
+10. End and delete the session from either surface.
+
+The phone intentionally has no interactive 3D canvas. It is the private input and approval surface; the laptop owns the high-quality public canvas.
+
+## Routes
+
+- `/wall` — create the laptop Studio Wall session
+- `/wall/[sessionId]` — Explore, Model, Compare, Review, and Decision Trace
+- `/control/[sessionId]` — mobile-first Space, Brief, Options, Refine, and Approve controller
+- `/studio` — combined single-surface fallback and the earlier interior/exterior workbench
+- `/proof/prepared-dining-room` — deeper deterministic authority proof
 
 ## Run locally
 
@@ -33,47 +35,71 @@ Requirements: Node.js 22 or newer.
 
 ```bash
 npm install
+copy .env.example .env.local
 npm run dev
 ```
 
-Open `http://localhost:3000` for the Studio. The deeper authority proof remains available at `http://localhost:3000/proof/prepared-dining-room` and works without credentials: turn on **Offline proof mode** before selecting **Clarify and check**.
+Open <http://localhost:3000/wall>. With no Supabase credentials, Interiorin automatically uses and visibly labels **same-device demo mode**. Open the generated controller URL in a second window on the same browser origin.
 
-To exercise the conditional live proposal adapter, copy `.env.example` to `.env.local`, set `OPENAI_API_KEY`, verify a server-side canary against the exact `gpt-5.6-terra` model, record its genuine response ID in `OPENAI_CANARY_RESPONSE_ID`, then set `ENABLE_LIVE_OPENAI=true`. Any missing or aliased provenance forces the disclosed prepared fallback. The model converts language into a typed proposal only. Deterministic code owns evidence authority, geometry, alternatives, and mutation.
+## Real-device Supabase pairing
+
+Set these deployment/local secrets:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SECRET_KEY=
+SESSION_TOKEN_PEPPER=
+NEXT_PUBLIC_APP_URL=
+```
+
+Apply the tracked migrations in `supabase/migrations/`. They create session/member/event tables, explicit membership RLS, private Realtime authorization, the private `studio-sources` bucket, atomic revision/idempotency commits, and hourly expiry cleanup. The publishable key is browser-safe; `SUPABASE_SECRET_KEY`, token pepper, provider keys, and canary IDs are server-only.
+
+Production Supabase Auth, private-channel RLS, Storage RLS, cleanup, and physical phone pairing are implemented but **not yet claimed as verified** because this workspace has no Supabase project credentials. Same-device mode remains the tested emergency demo path.
+
+## Optional live refinement provider
+
+The deterministic parser runs first. Only an unresolved request may call `/api/refine`. Live mode requires all three gates:
+
+```text
+OPENAI_API_KEY=
+ENABLE_LIVE_OPENAI=true
+OPENAI_CANARY_RESPONSE_ID=<genuine response ID from the exact configured model>
+```
+
+The required model is exactly `gpt-5.6-terra`. Missing, aliased, timed-out, malformed, or unverified provider behavior returns a disclosed deterministic clarification and never mutates the scene. The Decision Trace never exposes chain-of-thought, system/developer prompts, credentials, or raw unvalidated provider payloads.
+
+## Photo and privacy behavior
+
+- Browser-decodable images are orientation-corrected and re-encoded as JPEG.
+- Longest edge is limited to 2048 px; EXIF is removed; normalized size is limited to 5 MB.
+- Unsupported HEIC receives a typed recovery instruction.
+- Image bytes never travel through Realtime; events contain only safe object IDs and metadata.
+- Sessions permit one wall and one controller, expire after 24 hours, and cap sources/refinements/versions/events.
+- Pairing tokens are random, hashed at rest, single-use, and expire after ten minutes.
+- End/delete removes the private source and database session; scheduled cleanup removes expired sessions and objects.
 
 ## Verification
 
 ```bash
 npm run lint
 npm run typecheck
-npm run test
+npm test
 npm run test:e2e
 npm run build
 ```
 
-The browser suite builds and starts the production app, then runs the Studio and authority-proof journeys serially in desktop Chromium and mobile Chromium. Assertion screenshots are isolated under Playwright's disposable test output; curated proof render evidence is kept under `artifacts/screenshots/`.
+Current implementation gate: **28 test files / 83 tests**, zero-warning lint, strict TypeScript, optimized Next.js production build, paired Chromium intake→refinement→comparison→refresh→review→JSON→print journey, desktop/Pixel 7 checks, reduced-motion rules, visual inspection, and high-confidence secret scans.
 
-The current gate passes 27 test files / 81 tests, the optimized production build, and the production browser journeys across desktop/mobile with intentional skips for single-browser-only provider contracts. The original Forge proof verification remains in [docs/forge/verification-report.md](docs/forge/verification-report.md); the broader Studio slice is documented in [docs/studio-vertical-slice.md](docs/studio-vertical-slice.md).
+The current task’s Codex Session ID is `019f7391-31b1-7e73-9e15-d887f7dc38a0`.
 
-## Truth boundaries
+## Locked cuts
 
-- Studio metric geometry comes from dimensions entered by the user. When Gemini is configured, an attached image/PDF can contribute confidence-scored visible openings, retained objects, light, and style cues—but never inferred metric dimensions or hidden conditions.
-- Nano Banana concepts are presentation hypotheses. They do not replace canonical 3D state, prove fit, preserve every pixel, or authorize procurement/construction.
-- Suggested furniture, planting, and materials are decision-support hypotheses, not observations, procurement advice, a survey, code review, or construction documentation.
-- Browser speech recognition provides transcription where supported. ElevenLabs is installed as an integration dependency but is not part of this credential-free slice.
-- Named versions persist in this browser's local storage; there is no account, cloud sync, or shared professional portal yet.
-- A homeowner declaration is scoped to the session and remains flagged for professional review.
-- The 3D scene renders canonical state; it does not decide spatial validity.
-- Provider failure never grants permission. Offline parsing is labelled and uses the same bounded proposal contract.
-- No API key belongs in Git. Use local or deployment secrets only.
+The deadline hero journey excludes ElevenLabs, concept-image rendering, phone-side interactive 3D, GLTF/network textures, wall art/chair assets, photogrammetry, accounts, collaboration, telemetry, and a state-management refactor. Some older optional combined-Studio code remains behind non-hero paths/flags; it is not part of the paired submission claim.
 
-## Next product frontier
+## Project records
 
-The next frontier is calibrated multi-view photo/video or scan reconstruction, richer direct geometry editing and collision solving, cloud projects and collaboration, live provider-backed voice, and a professional review portal. Those capabilities remain roadmap items until implemented and verified.
-
-## Workspaces
-
-- Product repository: `E:\Personal Project\Interiorin`
-- Pipeline repository: `E:\Personal Project\forge`
-- Active run: `20260718-spatial-design-studio`
-- GitHub: <https://github.com/KIRTIRAJ4327/Interiorin>
-- Approved Forge package: [docs/forge/README.md](docs/forge/README.md)
+- Phase ledger: [docs/wow-pipeline-status.md](docs/wow-pipeline-status.md)
+- Paired architecture decision: [docs/decisions/0001-paired-phone-studio-wall.md](docs/decisions/0001-paired-phone-studio-wall.md)
+- Product repository: <https://github.com/KIRTIRAJ4327/Interiorin>
+- Forge run: `20260718-spatial-design-studio`

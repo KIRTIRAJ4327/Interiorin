@@ -26,6 +26,11 @@ test("same-device pairing is disclosed and the wall observes one controller", as
   await expect(page.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth)).resolves.toBe(true);
   await page.screenshot({ path: testInfo.outputPath("paired-wall.png"), fullPage: true });
   await phone.screenshot({ path: testInfo.outputPath("paired-phone.png"), fullPage: true });
+  await expect(page.getByRole("button", { name: "End and delete session" })).toBeVisible();
+  phone.once("dialog", (dialog) => void dialog.accept());
+  await phone.getByRole("button", { name: "End and delete session" }).click();
+  await expect(phone.getByRole("heading", { name: "Session deleted." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "This room has left the wall." })).toBeVisible();
 });
 
 test("phone controller is readable at Pixel 7 width", async ({ page }, testInfo) => {
